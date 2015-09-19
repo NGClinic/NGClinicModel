@@ -1,6 +1,6 @@
-function [tx_signal, reflected_signal,fdoppler, tshift] = objectProcessingFunct( df, fc, fs, Tm, theta, distance, velocity)
+function [tx_signal, reflected_signal,fdoppler, tshift] = object_processing( df, fc, fs, Tm, theta, distance, velocity)
 %%-------------------------------------------------------------------------
-% Chirp Generator Function
+% Chirp Generator Fun
 % mngai@hmc.edu 
 %%-------------------------------------------------------------------------
 
@@ -13,11 +13,24 @@ t = 0:dt:2*Tm;              % Duration of chirp (s)
 % Generate signal
 ramp_gen = sawtooth(2*pi*t/(2*Tm),0.5);
 tx_signal = vco(ramp_gen,[fmin fmax],fs);
+len = length(tx_signal);
+fftsize = 2^nextpow2(len);
+tx_signal = fft(tx_signal, fftsize);
+tx_signal = ifft(tx_signal(1:fftsize/2), fftsize);
+tx_signal = tx_signal(1:len);
 
+
+figure
+plot(1:length(tx_signal), real(tx_signal), 1:length(tx_signal), imag(tx_signal))
+title('Plot TX Signal')
+
+figure
 spectrogram(tx_signal,256*2,220*2,512*8,fs,'yaxis')
 xlabel('Time(s)')
 ylabel('Frequency (Hz)')
 title('Spectrogram of Generated Chirp')
+axis([0 Tm*2 fmin*.6 fmax*1.4])
+
 
 
 %% Object Processing
@@ -61,6 +74,7 @@ xlabel('Time(s)')
 ylabel('Frequency (Hz)')
 title('Spectrogram of Doppler Shifted Chirp')
 axis([0 Tm*2 fmin*.6 fmax*1.4])
+
 
 %% Apply time shift
 reflected_signal = circshift(tx_freqshifted, [0, round(tshift/dt)]);

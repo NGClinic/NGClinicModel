@@ -4,8 +4,8 @@ fs = 11800;
 [chirpRefl,freqsRefl,t] = spectrogram(reflected_signal,256*2,220*2,512*8,fs);
 [chirpIn,freqIn,tin] = spectrogram(tx_signal,256*2,220*2,512*8,fs);
 figure
+title('Single Column of the Spectrogram Output')
 plot(freqIn,chirpIn(:,2))
-figure
 
 txFreqs = [];
 rxFreqs = [];
@@ -27,6 +27,7 @@ plot(rxFreqs, 'r')
 hold on
 plot(txFreqs, 'b')
 legend('rxFreqs', 'txFreqs')
+title('Compare Max Frequency')
 hold off
 
 beat = abs(rxFreqs - txFreqs);

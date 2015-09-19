@@ -24,7 +24,7 @@ title('Spectrogram of Generated Chirp')
 % Time Shift
 c = 3*10^8;                 % speed of light (m/s)
 tdelay = 2*distance/c;      % time delay (s)
-tshift = (tdelay/dt)*time_factor;
+tshift = (tdelay/dt);
 
 % Doppler Shift
 vr = velocity*sin(theta);   % radial velocity (m/s)

@@ -1,6 +1,5 @@
-function [ dist, vel, f_D, f_B ] = rxBlock( tx_signal, reflected_signal, gamma, df )
+function [ dist, vel, f_D, f_B ] = rxBlock( tx_signal, reflected_signal, gamma, fc, fs)
 
-fs = 11800;
 [chirpRefl,freqsRefl,t] = spectrogram(reflected_signal,256*2,220*2,512*8,fs);
 [chirpIn,freqIn,tin] = spectrogram(tx_signal,256*2,220*2,512*8,fs);
 figure
@@ -48,7 +47,7 @@ f_D = 0.5*(f2-f1);
 f_B = 0.5*(f2+f1);
 
 
-vel = abs(f_D*(3*10^8)/(2*df));
+vel = abs(f_D*(3*10^8)/(2*fc));
 dist = f_B*(3*10^8)/(2*gamma);
 
 end

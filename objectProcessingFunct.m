@@ -1,4 +1,4 @@
-function [tx_signal, reflected_signal,fdoppler, tshift] = object_processing( df, fc, fs, Tm, theta, distance, velocity)
+function [tx_signal, reflected_signal,fdoppler, tshift] = objectProcessingFunct( df, fc, fs, Tm, theta, distance, velocity)
 %%-------------------------------------------------------------------------
 % Chirp Generator Fun
 % mngai@hmc.edu 

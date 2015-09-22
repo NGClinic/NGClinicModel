@@ -3,6 +3,7 @@ close all
 clear
 clc
 c = 3*10^8;         % Speed of light (m/s)
+<<<<<<< HEAD
 df = 400*10^6;           % Bandwidth (Hz)
 fc = 1.2*10^9;           % Center frequency (Hz)
 fs = (fc+df/2)*20;  % Sampling rate (Hz)
@@ -14,6 +15,19 @@ velocity = 10^6;    % Velocity of object (m/s)
 gamma = df/Tm;      % Chirp Rate
 
 tic
+=======
+df = 3000;           % Bandwidth (Hz)
+fc = 500*10^2;           % Center frequency (Hz)
+fs = (fc+df/2)*20;  % Sampling rate (Hz)
+lambda = c/fc;      % Wavelength (m)
+Tm = (1/fc)*1000;   % Modulation index (s)
+theta = pi/2;       % Angle of Arrival for object (radians)
+distance = 400;  % Distance of object (m)
+velocity = 0;    % Velocity of object (m/s)
+gamma = df/Tm;      % Chirp Rate
+
+
+>>>>>>> 51b62deef3abaeefd4e0c52b2f63d15a395d11c2
 %% Object Processing
 
 % Generate Chirp
@@ -67,8 +81,11 @@ else
     fftsize = 2^nextpow2(length(tx_signal));
 end
 
+<<<<<<< HEAD
 
 %%
+=======
+>>>>>>> 51b62deef3abaeefd4e0c52b2f63d15a395d11c2
 fftres = fs/fftsize;
 % fftsize = 2^nextpow2(length(tx_signal));
 % fftres = fs/fftsize;
@@ -92,9 +109,13 @@ axis([0 Tm*2 fmin*.6 fmax*1.4])
 
 
 %% Apply time shift
+<<<<<<< HEAD
 len = length(tx_freqshifted);
 %reflected_signal = [zeros(round(tshift/dt),1)' tx_freqshifted(0:len-round(tshift/dt))]
 reflected_signal = circshift(tx_freqshifted, [0, round(tshift)]);
+=======
+reflected_signal = circshift(tx_freqshifted, [0, -round(tshift/dt)]);
+>>>>>>> 51b62deef3abaeefd4e0c52b2f63d15a395d11c2
 figure
 spectrogram(reflected_signal,256*2,220*2,512*8,fs,'yaxis')
 xlabel('Time(s)')
@@ -102,8 +123,11 @@ ylabel('Frequency (Hz)')
 title('Spectrogram of Reflected Chirp')
 axis([0 Tm*2 fmin*.6 fmax*1.4])
 
+<<<<<<< HEAD
 toc 
 tic
+=======
+>>>>>>> 51b62deef3abaeefd4e0c52b2f63d15a395d11c2
 
 %% RX Object Processing
 window = 256*2;
@@ -127,6 +151,7 @@ for n = 1:length(chirpRefl(1,:))
     rxFreqs = [rxFreqs,freqsRefl(locs(ind))];
 end
 
+<<<<<<< HEAD
 %% Plot Max TX/RX Frequency
 figure(4)
 plot((1:length(rxFreqs))*dt,rxFreqs, 'r')
@@ -136,10 +161,17 @@ hold on
 plot((1:length(txFreqs))*dt,txFreqs, 'b')
 xlabel('Time(s)')
 ylabel('Frequency (Hz)')
+=======
+figure
+plot(rxFreqs, 'r')
+hold on
+plot(txFreqs, 'b')
+>>>>>>> 51b62deef3abaeefd4e0c52b2f63d15a395d11c2
 legend('rxFreqs', 'txFreqs')
 title('Compare Max Frequency')
 hold off
 
+<<<<<<< HEAD
 %%
 beat = abs(rxFreqs - txFreqs);
 figure(5)
@@ -149,21 +181,41 @@ ylabel('Frequency (Hz)')
 title('beat')
 
 %% Detect plateaus
+=======
+beat = rxFreqs - txFreqs;
+
+figure
+plot(beat)
+title('beat')
+
+%%
+>>>>>>> 51b62deef3abaeefd4e0c52b2f63d15a395d11c2
 [txMax,txInd] = max(txFreqs)
 txMin = min(txFreqs)
 [rxMax,rxMaxInd] = max(rxFreqs)
 [rxMin,rxMinInd] = min(rxFreqs)
 
+<<<<<<< HEAD
 f1 = abs(mode(beat(rxMinInd:txInd)))
 f2 = abs(mode(beat(rxMaxInd:end)))
 
 
 %% Calculate velocity and distance
+=======
+f1 = abs(mean(beat(rxMinInd:txInd)))
+f2 = abs(mean(beat(rxMaxInd:end)))
+>>>>>>> 51b62deef3abaeefd4e0c52b2f63d15a395d11c2
 
 calc_fD = 0.5*(f2-f1);
 calc_fB = 0.5*(f2+f1);
 
 
+<<<<<<< HEAD
 calc_vel = abs(calc_fD*(3*10^8)/(2*fc));
 calc_dist = calc_fB*(3*10^8)/(2*gamma);
 toc
+=======
+cald_vel = abs(calc_fD*(3*10^8)/(2*fc));
+calc_dist = calc_fB*(3*10^8)/(2*gamma);
+
+>>>>>>> 51b62deef3abaeefd4e0c52b2f63d15a395d11c2

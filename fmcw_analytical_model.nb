@@ -1,0 +1,276 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 9.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       157,          7]
+NotebookDataLength[      9144,        267]
+NotebookOptionsPosition[      8220,        231]
+NotebookOutlinePosition[      8564,        246]
+CellTagsIndexPosition[      8521,        243]
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell[TextData[{
+ StyleBox["Northrop Grumman Clinic 2015/16\n", "Subtitle"],
+ StyleBox["FMCW Radar: Analytical Model", "Subsubtitle"]
+}], "Title",
+ CellChangeTimes->{{3.652246297062087*^9, 3.652246389358366*^9}}],
+
+Cell["", "Subtitle",
+ CellChangeTimes->{{3.652246576432066*^9, 3.6522465809563246`*^9}}],
+
+Cell["Chirp Generator", "Subsubtitle",
+ CellChangeTimes->{{3.6522465890687885`*^9, 3.6522465970012426`*^9}}],
+
+Cell[BoxData[
+ RowBox[{"(*", ")", "\[IndentingNewLine]"}]], "Input",
+ CellChangeTimes->{{3.6522466274639845`*^9, 3.6522466364224973`*^9}, {
+  3.652246717440131*^9, 3.6522467186902027`*^9}}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", 
+   RowBox[{"Set", " ", "up", " ", "constants"}], " ", "*)"}], 
+  "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{"c", " ", "=", " ", 
+     RowBox[{"3", "*", 
+      RowBox[{"10", "^", "8"}]}]}], ";", 
+    RowBox[{"(*", 
+     RowBox[{"Speed", " ", "of", " ", "Light", 
+      RowBox[{"(", 
+       RowBox[{"m", "/", "s"}], ")"}]}], "*)"}], "\[IndentingNewLine]", 
+    RowBox[{"fc", " ", "=", " ", "300"}], ";", " ", 
+    RowBox[{"(*", 
+     RowBox[{"Center", " ", "frequency", " ", 
+      RowBox[{"(", "Hz", ")"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+    RowBox[{"bw", " ", "=", " ", "100"}], ";"}], " ", 
+   RowBox[{"(*", 
+    RowBox[{"Bandwidth", " ", "frequency", " ", 
+     RowBox[{"(", "Hz", ")"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"fmin", " ", "=", " ", 
+     RowBox[{"fc", "-", 
+      RowBox[{"bw", "/", "2"}]}]}], ";", " ", 
+    RowBox[{"(*", " ", "Hz", " ", "*)"}], "\[IndentingNewLine]", 
+    RowBox[{"fmax", " ", "=", " ", 
+     RowBox[{"fc", " ", "+", " ", 
+      RowBox[{"bw", "/", "2"}]}]}], ";"}], " ", 
+   RowBox[{"(*", " ", "Hz", " ", "*)"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"lambda", " ", "=", " ", 
+     RowBox[{"fmax", "/", "c"}]}], ";"}], " ", 
+   RowBox[{"(*", " ", 
+    RowBox[{"Wavelength", " ", 
+     RowBox[{"(", "m", ")"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"Tm", " ", "=", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"1", "/", "fmin"}], ")"}], "*", "10"}]}], ";", " ", 
+    RowBox[{"(*", 
+     RowBox[{"Modulation", " ", "Index", " ", 
+      RowBox[{"(", "s", ")"}]}], " ", "*)"}], "\[IndentingNewLine]", 
+    RowBox[{"fs", " ", "=", " ", 
+     RowBox[{"fmax", "*", "3"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"dt", " ", "=", " ", 
+     RowBox[{"1", "/", "fs"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"tmin", " ", "=", " ", "0"}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"tmax", " ", "=", " ", 
+     RowBox[{"2", "*", "Tm"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"fprime", " ", "=", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"fmax", " ", "-", " ", "fmin"}], ")"}], "/", "Tm"}]}], ";"}], 
+   "\[IndentingNewLine]"}]}]], "Input",
+ CellChangeTimes->{{3.652246719840268*^9, 3.6522467819028187`*^9}, {
+  3.652246817466852*^9, 3.652246861410366*^9}, {3.6522760834386387`*^9, 
+  3.652276117865608*^9}, {3.6522761488193784`*^9, 3.652276182518306*^9}, {
+  3.652276435981803*^9, 3.652276438480946*^9}, {3.6522765783229446`*^9, 
+  3.6522766302679157`*^9}, {3.6522766755335045`*^9, 3.6522766790447054`*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"(*", " ", "Data", " ", "*)"}], "\[IndentingNewLine]", 
+  RowBox[{"(*", 
+   RowBox[{
+    RowBox[{"t", " ", "=", " ", 
+     RowBox[{"Table", "[", 
+      RowBox[{"i", ",", " ", 
+       RowBox[{"{", 
+        RowBox[{"i", ",", " ", "tmin", ",", " ", "tmax", ",", " ", "dt"}], 
+        "}"}]}], "]"}]}], ";"}], "*)"}], "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{
+    RowBox[{
+     RowBox[{"fmcw", "[", "t_", "]"}], ":=", " ", 
+     RowBox[{"Sin", "[", 
+      RowBox[{"2", "*", "Pi", "*", "t", 
+       RowBox[{"(", 
+        RowBox[{"fmin", " ", "+", " ", 
+         RowBox[{"(", 
+          RowBox[{
+           RowBox[{"(", 
+            RowBox[{"fprime", "*", "t"}], ")"}], "/", "2"}], ")"}]}], ")"}]}],
+       "]"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{
+    RowBox[{"chirp", "=", " ", 
+     RowBox[{"Table", "[", 
+      RowBox[{
+       RowBox[{"fmcw", "[", "t", "]"}], ",", " ", 
+       RowBox[{"{", 
+        RowBox[{"t", ",", " ", "tmin", ",", " ", "tmax", ",", " ", "dt"}], 
+        "}"}]}], "]"}]}], ";"}], "\[IndentingNewLine]", 
+   RowBox[{"ListLinePlot", "[", 
+    RowBox[{
+     RowBox[{"fmcw", "[", "t", "]"}], ",", " ", 
+     RowBox[{"{", 
+      RowBox[{"t", ",", " ", "tmin", ",", " ", "tmax"}], "}"}]}], 
+    "]"}]}]}]], "Input",
+ CellChangeTimes->{{3.6522466803960123`*^9, 3.6522467023772697`*^9}, {
+  3.6522468068402443`*^9, 3.652246814905706*^9}, {3.652246864772558*^9, 
+  3.6522469078590226`*^9}, {3.6522759804047456`*^9, 3.6522759840359535`*^9}, {
+  3.652276061345375*^9, 3.6522760779983273`*^9}, {3.6522761248540077`*^9, 
+  3.6522762300960274`*^9}, {3.6522762789588223`*^9, 3.652276285280184*^9}, {
+  3.6522763214222507`*^9, 3.65227634064135*^9}, {3.652276413585522*^9, 
+  3.652276451026664*^9}, {3.652276481274394*^9, 3.6522765498423157`*^9}}],
+
+Cell[BoxData[
+ FormBox[
+  RowBox[{
+   StyleBox[
+    RowBox[{"ListLinePlot", "::", "nonopt"}], "MessageName"], 
+   RowBox[{
+   ":", " "}], "\<\"Options expected (instead of \
+\[NoBreak]\\!\\(TraditionalForm\\`\\({t, 0, 2}\\)\\)\[NoBreak]) beyond \
+position \[NoBreak]\\!\\(TraditionalForm\\`3\\)\[NoBreak] in \
+\[NoBreak]\\!\\(TraditionalForm\\`\\(ListLinePlot[\\(\\(\\(\\(sin(\\(\\(2\\\\ \
+\[Pi]\\\\ t\\\\ \\(\\((250 + \\(\\(50\\\\ t\\)\\))\\)\\)\\)\\))\\)\\), \
+\\(\\({t, 0, 2}\\)\\)\\)\\)]\\)\\)\[NoBreak]. An option must be a rule or a \
+list of rules. \\!\\(\\*ButtonBox[\\\"\[RightSkeleton]\\\", \
+ButtonStyle->\\\"Link\\\", ButtonFrame->None, \
+ButtonData:>\\\"paclet:ref/message/General/nonopt\\\", ButtonNote -> \
+\\\"ListLinePlot::nonopt\\\"]\\)\"\>"}], TraditionalForm]], "Message", "MSG",
+ CellChangeTimes->{{3.6522764946631594`*^9, 3.6522765556726494`*^9}}],
+
+Cell[BoxData[
+ FormBox[
+  RowBox[{"ListLinePlot", "[", 
+   RowBox[{
+    RowBox[{"sin", "(", 
+     RowBox[{"2", " ", "\[Pi]", " ", "t", " ", 
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"50", " ", "t"}], "+", "250"}], ")"}]}], ")"}], ",", 
+    RowBox[{"{", 
+     RowBox[{"t", ",", "0", ",", "2"}], "}"}]}], "]"}], 
+  TraditionalForm]], "Output",
+ CellChangeTimes->{
+  3.652276455359912*^9, {3.652276494863171*^9, 3.6522765557706547`*^9}}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["Object Processing", "Subsubtitle",
+ CellChangeTimes->{{3.6522466058477488`*^9, 3.652246608525902*^9}, {
+  3.652246638765631*^9, 3.652246643198885*^9}}],
+
+Cell[BoxData[
+ RowBox[{"(*", ")"}]], "Input",
+ CellChangeTimes->{{3.652246644653968*^9, 3.6522466449479847`*^9}}],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"Table", "[", 
+  RowBox[{"i", ",", 
+   RowBox[{"{", 
+    RowBox[{"i", ",", " ", "0", ",", " ", "10", ",", "1"}], "}"}]}], 
+  "]"}]], "Input",
+ CellChangeTimes->{{3.6522466525714207`*^9, 3.6522466536104803`*^9}, {
+  3.6522759969776936`*^9, 3.6522760059612074`*^9}, {3.65227604692455*^9, 
+  3.65227605619108*^9}}],
+
+Cell[BoxData[
+ FormBox[
+  RowBox[{"{", 
+   RowBox[{
+   "0", ",", "1", ",", "2", ",", "3", ",", "4", ",", "5", ",", "6", ",", "7", 
+    ",", "8", ",", "9", ",", "10"}], "}"}], TraditionalForm]], "Output",
+ CellChangeTimes->{3.6522760070362687`*^9, 3.6522760565911036`*^9}]
+}, Open  ]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["RX Processing", "Subsubtitle",
+ CellChangeTimes->{{3.652246611174053*^9, 3.652246612921153*^9}}],
+
+Cell[BoxData[
+ RowBox[{"(*", ")"}]], "Input",
+ CellChangeTimes->{{3.6522466478771524`*^9, 3.652246648265175*^9}}]
+}, Open  ]]
+}, Open  ]]
+},
+WindowSize->{707, 637},
+WindowMargins->{{15, Automatic}, {Automatic, 8}},
+FrontEndVersion->"9.0 for Microsoft Windows (64-bit) (November 20, 2012)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[579, 22, 211, 4, 89, "Title"],
+Cell[793, 28, 88, 1, 49, "Subtitle"],
+Cell[884, 31, 108, 1, 28, "Subsubtitle"],
+Cell[995, 34, 189, 3, 52, "Input"],
+Cell[1187, 39, 2652, 65, 292, "Input"],
+Cell[CellGroupData[{
+Cell[3864, 108, 1798, 44, 112, "Input"],
+Cell[5665, 154, 869, 16, 39, "Message"],
+Cell[6537, 172, 445, 13, 30, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[7019, 190, 157, 2, 28, "Subsubtitle"],
+Cell[7179, 194, 113, 2, 31, "Input"],
+Cell[CellGroupData[{
+Cell[7317, 200, 334, 8, 31, "Input"],
+Cell[7654, 210, 271, 6, 30, "Output"]
+}, Open  ]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[7974, 222, 102, 1, 28, "Subsubtitle"],
+Cell[8079, 225, 113, 2, 31, "Input"]
+}, Open  ]]
+}, Open  ]]
+}
+]
+*)
+
+(* End of internal cache information *)

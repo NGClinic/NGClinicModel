@@ -102,42 +102,63 @@ title('Spectrogram of Reflected Chirp')
 axis([0 Tm*2 fmin*.8 fmax*1.2])
 
 toc 
+
 tic
+%% Hilbert Transform
+tx_hilbert = hilbert(real(tx_signal));
+txFreqs = fs/(2*pi)*diff(unwrap(angle(tx_hilbert)));
 
+refl_hilbert = hilbert(real(reflected_signal));
+rxFreqs = fs/(2*pi)*diff(unwrap(angle(refl_hilbert)));
+
+% Plot Instantaneous Frequency
+figure
+plot(t(1:length(t)-1),txFreqs, t(1:length(t)-1), rxFreqs)
+xlabel('Time')
+ylabel('Hz')
+grid on
+title('Instantaneous Frequency')
+legend('Transmitted Signal', 'Reflected Signal')
+
+
+
+
+
+%%
 %% RX Object Processing
-window = 256*2;
-noverlap = 220*2;
-spectfftsize = fftsize;
-[chirpRefl,freqsRefl,t] = spectrogram(reflected_signal,window,noverlap,fftsize,fs);
-[chirpIn,freqIn,tin] = spectrogram(tx_signal,window,noverlap,fftsize,fs);
-
-txFreqs = [];
-rxFreqs = [];
-
-for n = 1:length(chirpIn(1,:))
-    [pks,locs] = findpeaks(abs(chirpIn(:,n)));
-    [maxPk,ind] = max(pks);
-    txFreqs = [txFreqs,freqIn(locs(ind))];
-end
-
-for n = 1:length(chirpRefl(1,:))
-    [pks,locs] = findpeaks(abs(chirpRefl(:,n)));
-    [maxPk,ind] = max(pks);
-    rxFreqs = [rxFreqs,freqsRefl(locs(ind))];
-end
-
-%% Plot Max TX/RX Frequency
-figure(4)
-plot((1:length(rxFreqs))*dt,rxFreqs, 'r')
-xlabel('Time(s)')
-ylabel('Frequency (Hz)')
-hold on
-plot((1:length(txFreqs))*dt,txFreqs, 'b')
-xlabel('Time(s)')
-ylabel('Frequency (Hz)')
-legend('rxFreqs', 'txFreqs')
-title('Compare Max Frequency')
-hold off
+% window = 256*2;
+% noverlap = 220*2;
+% spectfftsize = fftsize;
+% [chirpRefl,freqsRefl,t] = spectrogram(reflected_signal,window,noverlap,fftsize,fs);
+% [chirpIn,freqIn,tin] = spectrogram(tx_signal,window,noverlap,fftsize,fs);
+% 
+% txFreqs = [];
+% rxFreqs = [];
+% 
+% for n = 1:length(chirpIn(1,:))
+%     [pks,locs] = findpeaks(abs(chirpIn(:,n)));
+%     [maxPk,ind] = max(pks);
+%     txFreqs = [txFreqs,freqIn(locs(ind))];
+% end
+% 
+% for n = 1:length(chirpRefl(1,:))
+%     [pks,locs] = findpeaks(abs(chirpRefl(:,n)));
+%     [maxPk,ind] = max(pks);
+%     rxFreqs = [rxFreqs,freqsRefl(locs(ind))];
+% end
+% 
+% %% Plot Max TX/RX Frequency
+% figure(4)
+% plot((1:length(rxFreqs))*dt,rxFreqs, 'r')
+% xlabel('Time(s)')
+% ylabel('Frequency (Hz)')
+% hold on
+% plot((1:length(txFreqs))*dt,txFreqs, 'b')
+% xlabel('Time(s)')
+% ylabel('Frequency (Hz)')
+% legend('rxFreqs', 'txFreqs')
+% title('Compare Max Frequency')
+% hold off
 
 %% Plot Beat Frequency
 beat = abs(rxFreqs - txFreqs);

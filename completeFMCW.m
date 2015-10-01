@@ -9,24 +9,18 @@ fc = 1.2*10^9;      % Center frequency (Hz)
 fmin = fc-df/2;     % Hz
 fmax = fc+df/2;     % 
 fs = fmax*2.1;      % Sampling rate (Hz)
-Tm = 1.25*10^-3;    %(1/fc)*10^4;   % Modulation index (s)
+Tm = (1/fc)*10^4;   %1.25*10^-3;    %(1/fc)*10^4;   % Modulation index (s)
 dt = 1/fs;          % Time Step (s)
 t = 0:dt:2*Tm;      % Duration of chirp (s)
 theta = pi/2;       % Angle of Arrival for object (radians)
 distance = 20;      % Distance of object (m)
-velocity = 0;       % Velocity of object (m/s)
+velocity = 50;      % Velocity of object (m/s)
 gamma = df/Tm;      % Chirp Rate
 
 tic
 
-%% Preallocate memory
-% tx_signal = zeros(7297501, 1);
-% reflected_signal = zeros(7297501, 1);
-% tx_hilbert = zeros(7297501,1);
-% freq_hilbert = zeros(7297501,1);
 
 %% Object Processing
-
 % Generate signal
 ramp_gen = sawtooth(2*pi*t/(2*Tm),0.5);
 tx_signal = vco(ramp_gen,[fmin fmax],fs);
@@ -111,8 +105,9 @@ clear tx_hilbert refl_hilbert
 
 % Plot Instantaneous Frequency
 figure (5)
-plot((1000:length(txFreqs)-1000)*dt,txFreqs(1000:length(txFreqs)-1000),...
-    (1000:length(rxFreqs)-1000)*dt, rxFreqs(1000:length(txFreqs)-1000))
+plot(1:length(txFreqs), txFreqs, 1:length(rxFreqs), rxFreqs)
+% plot((1000:length(txFreqs)-1000)*dt,txFreqs(1000:length(txFreqs)-1000),...
+%     (1000:length(rxFreqs)-1000)*dt, rxFreqs(1000:length(txFreqs)-1000))
 xlabel('Time')
 ylabel('Hz')
 grid on
@@ -131,10 +126,10 @@ beat = conv(beat, filter, 'same');
 clear filter sizefilter
 
 figure(6)
-plot((1000:length(beat)-1000)*dt + 1000*dt, beat(1000:length(beat)-1000));
+plot(1:length(beat), beat);
 xlabel('Time(s)')
 ylabel('Frequency (Hz)')
-title('Frequency Difference')
+title('Beat Signal')
 
 %% Detect plateaus
 [txMax,txMaxInd] = max(txFreqs);
@@ -142,8 +137,21 @@ txMin = min(txFreqs);
 [rxMax,rxMaxInd] = max(rxFreqs);
 [rxMin,rxMinInd] = min(rxFreqs);
 
+rxMinInd = rxMinInd + 2000;
+txMaxInd = txMaxInd - 1000;
+rxMaxInd = rxMaxInd + 1000;
+endInd = length(beat) - 2000;
+
+
+
 f1 = abs(median(beat(rxMinInd:txMaxInd)));
-f2 = abs(median(beat(rxMaxInd:end)));
+f2 = abs(median(beat(rxMaxInd:endInd)));
+
+figure(6)
+hold on
+plot(rxMinInd:txMaxInd, beat(rxMinInd:txMaxInd), 'rx')
+hold on
+plot(rxMaxInd:endInd, beat(rxMaxInd:endInd), 'ko')
 
 
 %% Calculate velocity and distance
@@ -151,10 +159,10 @@ calc_fD = 0.5*(f2-f1);
 calc_fB = 0.5*(f2+f1);
 
 calc_vel = abs(calc_fD*(3*10^8)/(2*fc));
-vel_error= (calc_vel - velocity)/velocity;
+vel_error= 100*(calc_vel - velocity)/velocity;
 
 calc_dist = calc_fB*(3*10^8)/(2*gamma);
-dist_error = (calc_dist - distance)/distance;
+dist_error = 100*(calc_dist - distance)/distance;
 toc
 
 clear f1 f2 txFreqs txMax txMaxInd txMin fftres fmax fmin ...

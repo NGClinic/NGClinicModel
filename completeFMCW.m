@@ -1,25 +1,31 @@
 % Top Level File for the FMCW Radar
+
 close all
 clear
 clc
 c = 3*10^8;         % Speed of light (m/s)
 df = 380*10^6;      % Bandwidth (Hz)
 fc = 1.2*10^9;      % Center frequency (Hz)
-fs = (fc+df/2)*2.1; % Sampling rate (Hz)
-Tm = (1/fc)*10^4;   % Modulation index (s)
+fmin = fc-df/2;     % Hz
+fmax = fc+df/2;     % 
+fs = fmax*2.1;      % Sampling rate (Hz)
+Tm = 1.25*10^-3;    %(1/fc)*10^4;   % Modulation index (s)
+dt = 1/fs;          % Time Step (s)
+t = 0:dt:2*Tm;      % Duration of chirp (s)
 theta = pi/2;       % Angle of Arrival for object (radians)
-distance = 50;      % Distance of object (m)
-velocity = 10^6;    % Velocity of object (m/s)
+distance = 20;      % Distance of object (m)
+velocity = 0;       % Velocity of object (m/s)
 gamma = df/Tm;      % Chirp Rate
 
 tic
-%% Object Processing
 
-% Generate Chirp
-fmin = fc-df/2;             % Hz
-fmax = fc+df/2;             % Hz
-dt = 1/fs;                  % Time Step (s)
-t = 0:dt:2*Tm;              % Duration of chirp (s)
+%% Preallocate memory
+% tx_signal = zeros(7297501, 1);
+% reflected_signal = zeros(7297501, 1);
+% tx_hilbert = zeros(7297501,1);
+% freq_hilbert = zeros(7297501,1);
+
+%% Object Processing
 
 % Generate signal
 ramp_gen = sawtooth(2*pi*t/(2*Tm),0.5);
@@ -30,35 +36,25 @@ tx_signal = fft(tx_signal, fftsize);
 tx_signal = ifft(tx_signal(1:fftsize/2), fftsize);
 tx_signal = tx_signal(1:len);
 
+clear ramp_gen fftsize len t df fmin fmax Tm
+ 
+% % Plot Transmitted Signal
+% figure(1)
+% plot(1:length(tx_signal), real(tx_signal), 1:length(tx_signal), imag(tx_signal))
+% title('Plot TX Signal')
 
-figure
-plot(1:length(tx_signal), real(tx_signal), 1:length(tx_signal), imag(tx_signal))
-title('Plot TX Signal')
-
-%% Plot Generated Chirp
-figure
-spectrogram(tx_signal,256*4,220*4,512*16,fs,'yaxis')
-xlabel('Time(s)')
-ylabel('Frequency (Hz)')
-title('Spectrogram of Generated Chirp')
-axis([0 Tm*2 fmin*.8 fmax*1.2])
-
+% % Plot Generated Chirp
+% figure(2)
+% spectrogram(tx_signal,256*4,220*4,512*16,fs, 'yaxis')
+% title('Spectrogram of Generated Chirp')
 
 
-%% Calculate Shifts from Object Reflection
-% Time Shift
-c = 3*10^8;                 % speed of light (m/s)
-tdelay = 2*distance/c;      % time delay (s)
-tshift = tdelay/dt;
+%% Doppler Shift Calculations
 
 % Doppler Shift
 vr = velocity*sin(theta);   % radial velocity (m/s)
 lambda = c/fc;              % wavelength of carrier signal (m)
 fdoppler = (2*vr)/lambda;   % Doppler shift (Hz)
-fftsize = 2^nextpow2(max(length(tx_signal),fs/fdoppler));
-
-
-%% Apply Freq Shift
 
 % Determine the necessary resolution for the fft shift
 if (fdoppler ~= 0)
@@ -68,52 +64,55 @@ else
 end
 
 
-%% Freq Shift Data
+% Freq Shift Data
 fftres = fs/fftsize;
-% fftsize = 2^nextpow2(length(tx_signal));
-% fftres = fs/fftsize;
-
 fftshift = round(fdoppler/fftres);
 fdoppler = fftshift*fftres;
 fft_tx = fft(tx_signal,fftsize);
 
 % Shift the FFT data
 fft_tx_shift = circshift(fft_tx(1:fftsize/2), [0, fftshift]);
-
-
-%% Plot Doppler Shifted Data
 tx_freqshifted = ifft(fft_tx_shift, fftsize);
 tx_freqshifted = tx_freqshifted(1:length(tx_signal));
-spectrogram(tx_freqshifted,256*2,220*2,512*8,fs,'yaxis')
-xlabel('Time(s)')
-ylabel('Frequency (Hz)')
-title('Spectrogram of Doppler Shifted Chirp')
-axis([0 Tm*2 fmin*.8 fmax*1.2])
 
+% %% Plot Doppler Shifted Data
+% figure(3)
+% spectrogram(tx_freqshifted,256*2,220*2,512*8,fs,'yaxis')
+% title('Spectrogram of Doppler Shifted Chirp')
+clear lambda fftsize fftshift fft_tx_shift fft_tx theta vr lambda fdoppler fftres
 
-%% Apply time shift
+%% Time Shift Calculations
+% Determine Time Shift
+tdelay = 2*distance/c;      % time delay (s)
+tshift = tdelay/dt;
+
 len = length(tx_freqshifted);
 reflected_signal = circshift(tx_freqshifted, [0, round(tshift)]);
-figure
-spectrogram(reflected_signal,256*2,220*2,512*8,fs,'yaxis')
-xlabel('Time(s)')
-ylabel('Frequency (Hz)')
-title('Spectrogram of Reflected Chirp')
-axis([0 Tm*2 fmin*.8 fmax*1.2])
 
+% % Plot Time Shifted Chirp
+% figure (4)
+% spectrogram(reflected_signal,256*2,220*2,512*8,fs,'yaxis')
+% title('Spectrogram of Reflected Chirp')
+
+clear tdelay tshift tx_freqshifted c len
 toc 
 
 tic
 %% Hilbert Transform
 tx_hilbert = hilbert(real(tx_signal));
-txFreqs = fs/(2*pi)*diff(unwrap(angle(tx_hilbert)));
-
 refl_hilbert = hilbert(real(reflected_signal));
+
+clear tx_signal reflected_signal
+
+txFreqs = fs/(2*pi)*diff(unwrap(angle(tx_hilbert)));
 rxFreqs = fs/(2*pi)*diff(unwrap(angle(refl_hilbert)));
 
+clear tx_hilbert refl_hilbert
+
 % Plot Instantaneous Frequency
-figure
-plot(t(1:length(t)-1),txFreqs, t(1:length(t)-1), rxFreqs)
+figure (5)
+plot((1000:length(txFreqs)-1000)*dt,txFreqs(1000:length(txFreqs)-1000),...
+    (1000:length(rxFreqs)-1000)*dt, rxFreqs(1000:length(txFreqs)-1000))
 xlabel('Time')
 ylabel('Hz')
 grid on
@@ -121,77 +120,43 @@ title('Instantaneous Frequency')
 legend('Transmitted Signal', 'Reflected Signal')
 
 
-
-
-
-%%
-%% RX Object Processing
-% window = 256*2;
-% noverlap = 220*2;
-% spectfftsize = fftsize;
-% [chirpRefl,freqsRefl,t] = spectrogram(reflected_signal,window,noverlap,fftsize,fs);
-% [chirpIn,freqIn,tin] = spectrogram(tx_signal,window,noverlap,fftsize,fs);
-% 
-% txFreqs = [];
-% rxFreqs = [];
-% 
-% for n = 1:length(chirpIn(1,:))
-%     [pks,locs] = findpeaks(abs(chirpIn(:,n)));
-%     [maxPk,ind] = max(pks);
-%     txFreqs = [txFreqs,freqIn(locs(ind))];
-% end
-% 
-% for n = 1:length(chirpRefl(1,:))
-%     [pks,locs] = findpeaks(abs(chirpRefl(:,n)));
-%     [maxPk,ind] = max(pks);
-%     rxFreqs = [rxFreqs,freqsRefl(locs(ind))];
-% end
-% 
-% %% Plot Max TX/RX Frequency
-% figure(4)
-% plot((1:length(rxFreqs))*dt,rxFreqs, 'r')
-% xlabel('Time(s)')
-% ylabel('Frequency (Hz)')
-% hold on
-% plot((1:length(txFreqs))*dt,txFreqs, 'b')
-% xlabel('Time(s)')
-% ylabel('Frequency (Hz)')
-% legend('rxFreqs', 'txFreqs')
-% title('Compare Max Frequency')
-% hold off
-
 %% Plot Beat Frequency
 beat = abs(rxFreqs - txFreqs);
-figure(5)
-plot((1:length(beat))*dt, beat)
+
+% Add moving average filter
+sizefilter = 100;
+filter = repmat(1/sizefilter, 1, sizefilter);
+beat = conv(beat, filter, 'same');
+
+clear filter sizefilter
+
+figure(6)
+plot((1000:length(beat)-1000)*dt + 1000*dt, beat(1000:length(beat)-1000));
 xlabel('Time(s)')
 ylabel('Frequency (Hz)')
 title('Frequency Difference')
 
 %% Detect plateaus
-[txMax,txInd] = max(txFreqs)
-txMin = min(txFreqs)
-[rxMax,rxMaxInd] = max(rxFreqs)
-[rxMin,rxMinInd] = min(rxFreqs)
+[txMax,txMaxInd] = max(txFreqs);
+txMin = min(txFreqs);
+[rxMax,rxMaxInd] = max(rxFreqs);
+[rxMin,rxMinInd] = min(rxFreqs);
 
-f1 = abs(mode(beat(rxMinInd:txInd)))
-f2 = abs(mode(beat(rxMaxInd:end)))
+f1 = abs(median(beat(rxMinInd:txMaxInd)));
+f2 = abs(median(beat(rxMaxInd:end)));
 
 
 %% Calculate velocity and distance
-
 calc_fD = 0.5*(f2-f1);
 calc_fB = 0.5*(f2+f1);
 
-
 calc_vel = abs(calc_fD*(3*10^8)/(2*fc));
+vel_error= (calc_vel - velocity)/velocity;
+
 calc_dist = calc_fB*(3*10^8)/(2*gamma);
+dist_error = (calc_dist - distance)/distance;
 toc
 
-%% Results
-distance
-calc_dist
-dist_error = (calc_dist - distance)/distance
-velocity
-calc_vel
-vel_error= (calc_vel - velocity)/velocity
+clear f1 f2 txFreqs txMax txMaxInd txMin fftres fmax fmin ...
+    rxFreqs rxMax rxMaxInd rxMin rxMinInd beat gamma calc_fB ...
+    dt fc fs  gamma 

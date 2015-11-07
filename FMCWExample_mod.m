@@ -60,16 +60,16 @@ hcarplatform = phased.Platform('InitialPosition',...
     'Velocity',[car_speed;0;0]);
 
 %% Interference Model
-int_init_pos = [hcarplatform.InitialPosition(1)+2, 0, .505]';
-in_speed = -30;
-[int_rng, int_ang] = rangeangle(int_init_pos, hradarplatform.InitialPosition);
-int_rcs = db2pow(min(10*log10(int_rng)+5,20));
+itfer_init_pos = [hcarplatform.InitialPosition(1)+2, 0, 2.5]';
+itfer_speed = -30;
+[int_rng, int_ang] = rangeangle(itfer_init_pos, hradarplatform.InitialPosition);
+itfer_rcs = db2pow(min(10*log10(int_rng)+5,20));
 
-hcar = phased.RadarTarget('MeanRCS',int_rcs,'PropagationSpeed',c,...
+hitfer = phased.RadarTarget('MeanRCS',itfer_rcs,'PropagationSpeed',c,...
     'OperatingFrequency',fc);
-hintplatform = phased.Platform('InitialPosition',...
-    int_init_pos,...
-    'Velocity',[in_speed;0;0]);
+hitferplatform = phased.Platform('InitialPosition',...
+    itfer_init_pos,...
+    'Velocity',[itfer_speed;0;0]);
 
 %% The propagation model is assumed to be free space.
 
@@ -100,43 +100,66 @@ hrx = phased.ReceiverPreamp('Gain',rx_gain,...
 
 %% Next, run the simulation loop. 
 N = 64;
-Nsweep = 64; %Make this a multiple of N
+Nsweep = 2; %Even number
 xr = complex(zeros(hwav.SampleRate*hwav.SweepTime,Nsweep));
 radar_pos = zeros(Nsweep,3);
 radar_vel = zeros(Nsweep,3);
 tgt_pos = zeros(Nsweep,3);
 tgt_vel = zeros(Nsweep, 3);
-int_pos = zeros(Nsweep, 3);
-int_vel = zeros(Nsweep,3);
+itfer_pos = zeros(Nsweep, 3);
+itfer_vel = zeros(Nsweep,3);
 
 for m = 1:Nsweep
+    
+    % Move objects
     [radar_pos(m,:),radar_vel(m,:)] = step(...
         hradarplatform,hwav.SweepTime);       % radar moves during sweep
     [tgt_pos(m,:),tgt_vel(m,:)] = step(hcarplatform,... 
         hwav.SweepTime);                      % car moves during sweep
-    [int_pos(m,:), int_vel(m,:)] = step(hintplatform,...
-        hwav.SweepTime);
+    [itfer_pos(m,:), itfer_vel(m,:)] = step(hitferplatform,...
+        hwav.SweepTime);                       % interferer moves during sweep
+
+    
+    % Generate Our Signal
     x = step(hwav);                           % generate the FMCW signal
     xt = step(htx,x);                         % transmit the signal
     xp = step(hchannel,xt,radar_pos(m,:)',tgt_pos(m,:)',...
         radar_vel(m,:)',tgt_vel(m,:)');                   % propagate the signal
+%     xp2 = step(hchannel,xp,radar_pos(m,:)',tgt_pos(m,:)',...
+%         radar_vel(m,:)',tgt_vel(m,:)');
     xrefl = step(hcar,xp);                       % reflect the signal
+%     xp2 = step(hchannel,xrefl,radar_pos(m,:)',tgt_pos(m,:)',...
+%         radar_vel(m,:)',tgt_vel(m,:)');                   % propagate the signal
+    
+    
+    % Interfering Signal
+    xitfer = x;
+    xitfer_t = step(htx, xitfer);
+    
+    
     xrx = step(hrx,xrefl);                        % receive the signal
     xd = dechirp(xrx,x);                       % dechirp the signal
+ 
     
     
-    
-    [pxx,f] = periodogram(x, hamming(length(x)), nextpow2(length(x)), fs);
-    [pxxt,ft] = periodogram(xt, hamming(length(xt)), nextpow2(length(xt)), fs);    
-    [pxxr,fr] = periodogram(xp, hamming(length(xp)), nextpow2(length(xp)), fs);    
-    [pxxrefl,frefl] = periodogram(xrefl, hamming(length(xrefl)), nextpow2(length(xrefl)), fs);    
-    [pxxrx,frx] = periodogram(xrx, hamming(length(xrx)), nextpow2(length(xrx)), fs);
-    [pxxd,fd] = periodogram(xd, hamming(length(xd)), nextpow2(length(xd)), fs);
-    
+   
     
     
     xr(:,m) = xd;                             % buffer the dechirped signal
 end
+
+% Save data for ploting
+[pxx,f] = periodogram(x, hamming(length(x)), nextpow2(length(x)), fs);
+[pxxt,ft] = periodogram(xt, hamming(length(xt)), nextpow2(length(xt)), fs);    
+[pxxr,fr] = periodogram(xp, hamming(length(xp)), nextpow2(length(xp)), fs);    
+[pxxrefl,frefl] = periodogram(xrefl, hamming(length(xrefl)), nextpow2(length(xrefl)), fs);    
+[pxxrx,frx] = periodogram(xrx, hamming(length(xrx)), nextpow2(length(xrx)), fs);
+[pxxd,fd] = periodogram(xd, hamming(length(xd)), nextpow2(length(xd)), fs);
+pxx = 10*log10(pxx);
+pxxt = 10*log10(pxxt);
+pxxr = 10*log10(pxxr);
+pxxrefl = 10*log10(pxxrefl);
+pxxrx = 10*log10(pxxrx);
 
 %% Splitting up the sweeps;
 xr_upsweep = xr(:,1:2:end);
@@ -146,13 +169,22 @@ xr_downsweep = xr(:,2:2:end);
 
 %% Plotting Power
 figure
-plot(f, 10*log10(pxx), ft, 10*log10(pxxt), ...
-    fr, 10*log10(pxxr), ...
-    frefl, 10*log10(pxxrefl),...
-    frx, 10*log10(pxxrx));
+plot(f, pxx,...
+    ft,pxxt, ...
+    fr, pxxr, ...
+    frefl, pxxrefl,...
+    frx, pxxrx);
+text(f(2), pxx(2),'(1)', 'BackgroundColor', 'w');
+text(f(2), pxxt(2),'(2)', 'BackgroundColor', 'w');
+text(f(2), pxxr(2),'(3)', 'BackgroundColor', 'w');
+text(f(2), pxxrefl(2),'(4)', 'BackgroundColor', 'w');
+text(f(2), pxxrx(2),'(5)', 'BackgroundColor', 'w');
+
 title('Periodogram Power Spectral Density Estimate')
-legend('Generated Signal', 'Transmitted Signal', 'Propagated Signal',...
-    'Reflected Signal', 'Received Signal');
+legend('(1) Generated Signal', '(2) Transmitted Signal', '(3) Propagated Signal',...
+    '(4) Reflected Signal', '(5) Received Signal');
+xlabel('Frequency (Hz)')
+ylabel('Power (dB)')
 
 %% Plotting Target Positions
 figure
@@ -162,9 +194,9 @@ radar_pos_z = radar_pos(:,3);
 tgt_pos_x = tgt_pos(:,1);
 tgt_pos_y = tgt_pos(:,2);
 tgt_pos_z = tgt_pos(:,3);
-int_pos_x = int_pos(:,1);
-int_pos_y = int_pos(:,2);
-int_pos_z = int_pos(:,3);
+int_pos_x = itfer_pos(:,1);
+int_pos_y = itfer_pos(:,2);
+int_pos_z = itfer_pos(:,3);
 hold on
 plot(radar_pos_x,radar_pos_z, 'b-');
 plot(radar_pos_x(1),radar_pos_z(1), 'bo');
@@ -183,6 +215,7 @@ legend('Our Radar','Our Start', 'Our End','Target System', ...
     'Target Start', 'Target End', 'Interfer', 'Interferer Start', 'Interferer Stop')
 title('Position of Vehicles')
 grid
+axis([-10 10 -10 10])
 hold off
 
 

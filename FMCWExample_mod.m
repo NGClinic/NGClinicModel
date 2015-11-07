@@ -60,9 +60,18 @@ hcarplatform = phased.Platform('InitialPosition',...
     'Velocity',[car_speed;0;0]);
 
 %% Interference Model
+int_init_pos = [hcarplatform.InitialPosition(1)+2, 0, .505]';
+in_speed = -30;
+[int_rng, int_ang] = rangeangle(int_init_pos, hradarplatform.InitialPosition);
+int_rcs = db2pow(min(10*log10(int_rng)+5,20));
 
-%%
-% The propagation model is assumed to be free space.
+hcar = phased.RadarTarget('MeanRCS',int_rcs,'PropagationSpeed',c,...
+    'OperatingFrequency',fc);
+hintplatform = phased.Platform('InitialPosition',...
+    int_init_pos,...
+    'Velocity',[in_speed;0;0]);
+
+%% The propagation model is assumed to be free space.
 
 hchannel = phased.FreeSpace('PropagationSpeed',c,...
     'OperatingFrequency',fc,'SampleRate',fs,'TwoWayPropagation',true);
@@ -90,18 +99,23 @@ hrx = phased.ReceiverPreamp('Gain',rx_gain,...
     
 
 %% Next, run the simulation loop. 
-Nsweep = 2;
+N = 64;
+Nsweep = 64; %Make this a multiple of N
 xr = complex(zeros(hwav.SampleRate*hwav.SweepTime,Nsweep));
 radar_pos = zeros(Nsweep,3);
 radar_vel = zeros(Nsweep,3);
 tgt_pos = zeros(Nsweep,3);
 tgt_vel = zeros(Nsweep, 3);
+int_pos = zeros(Nsweep, 3);
+int_vel = zeros(Nsweep,3);
 
 for m = 1:Nsweep
     [radar_pos(m,:),radar_vel(m,:)] = step(...
         hradarplatform,hwav.SweepTime);       % radar moves during sweep
     [tgt_pos(m,:),tgt_vel(m,:)] = step(hcarplatform,... 
         hwav.SweepTime);                      % car moves during sweep
+    [int_pos(m,:), int_vel(m,:)] = step(hintplatform,...
+        hwav.SweepTime);
     x = step(hwav);                           % generate the FMCW signal
     xt = step(htx,x);                         % transmit the signal
     xp = step(hchannel,xt,radar_pos(m,:)',tgt_pos(m,:)',...
@@ -128,6 +142,8 @@ end
 xr_upsweep = xr(:,1:2:end);
 xr_downsweep = xr(:,2:2:end);
 
+%% Plotting Spectrogram
+
 %% Plotting Power
 figure
 plot(f, 10*log10(pxx), ft, 10*log10(pxxt), ...
@@ -146,6 +162,9 @@ radar_pos_z = radar_pos(:,3);
 tgt_pos_x = tgt_pos(:,1);
 tgt_pos_y = tgt_pos(:,2);
 tgt_pos_z = tgt_pos(:,3);
+int_pos_x = int_pos(:,1);
+int_pos_y = int_pos(:,2);
+int_pos_z = int_pos(:,3);
 hold on
 plot(radar_pos_x,radar_pos_z, 'b-');
 plot(radar_pos_x(1),radar_pos_z(1), 'bo');
@@ -154,10 +173,15 @@ plot(radar_pos_x(Nsweep),radar_pos_z(Nsweep), 'bx');
 plot(tgt_pos_x, tgt_pos_z, 'g-');
 plot(tgt_pos_x(1), tgt_pos_z(1), 'go');
 plot(tgt_pos_x(Nsweep), tgt_pos_z(Nsweep), 'gx');
+
+plot(int_pos_x, int_pos_z, 'r-');
+plot(int_pos_x(1), int_pos_z(1), 'ro');
+plot(int_pos_x(Nsweep), int_pos_z(Nsweep), 'rx');
 xlabel('X (m)')
 ylabel('Z (m)')
 legend('Our Radar','Our Start', 'Our End','Target System', ...
-    'Target Start', 'Target End')
+    'Target Start', 'Target End', 'Interfer', 'Interferer Start', 'Interferer Stop')
+title('Position of Vehicles')
 grid
 hold off
 
@@ -186,14 +210,17 @@ end
 
 
 
-%%
-% The up sweep and down sweep are processed separately to obtain the beat
-% frequencies corresponding to both up and down sweep.
-fbu_rng = rootmusic(pulsint(xr_upsweep,'coherent'),1,fs);
-fbd_rng = rootmusic(pulsint(xr_downsweep,'coherent'),1,fs);
-output.rng_est = beat2range([fbu_rng fbd_rng],sweep_slope,c);
-fd = -(fbu_rng+fbd_rng)/2;
-output.v_est = dop2speed(fd,lambda)/2;
+%% Calculation
+% Ncalc = floor(Nsweep/4);
+% output.rng_est = zeros(Ncalc,1);
+% output.v_est = zeros(Ncalc, 1);
+% for i=1:Ncalc
+    fbu_rng = rootmusic(pulsint(xr_upsweep,'coherent'),1,fs);
+    fbd_rng = rootmusic(pulsint(xr_downsweep,'coherent'),1,fs);
+    output.rng_est = beat2range([fbu_rng fbd_rng],sweep_slope,c);
+    fd = -(fbu_rng+fbd_rng)/2;
+    output.v_est = dop2speed(fd,lambda)/2;
+% end
 
 disp(output)
 

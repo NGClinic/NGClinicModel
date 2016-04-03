@@ -105,20 +105,6 @@ rx_gain = 15+ant_gain;                          % in dB
 rx_nf = 4.5;                                    % in dB
 rx_loss_factor = 0;                             % in dB **TODO
 
-
-% Original Example Values
-% ant_aperture = 6.06e-4;                         % in square meter
-% ant_gain = aperture2gain(ant_aperture,lambda);  % in dB                                                 %radiator
-% 
-% tx_ppower = db2pow(5)*1e-3;                     % in watts
-% tx_gain = 9+ant_gain;                           % in dB
-% tx_loss_factor = 0;      
-% 
-% rx_gain = 15+ant_gain;                          % in dB
-% rx_nf = 4.5;                                    % in dB
-% rx_loss_factor = 0;                             % in dB **TODO
-
-
 htx = phased.Transmitter('PeakPower',tx_ppower,...
     'Gain',tx_gain,...
     'LossFactor',tx_loss_factor);
@@ -143,12 +129,6 @@ xr = zeros(length(step(hwav)), Nsweep);
 maxdist = 10;
 beatsignal = zeros((tm/2)*fs*2*Nsweep, 1);
 
-% radar_pos(:,1) = (1:Nsweep).*hwav.SweepTime.*radar_speed(1) + radar_init_pos(1);
-% radar_pos(:,2) = (1:Nsweep).*hwav.SweepTime.*radar_speed(2) + radar_init_pos(2);
-% radar_pos(:,3) = (1:Nsweep).*hwav.SweepTime.*radar_speed(3) + radar_init_pos(3);
-
-% radar_pos = repmat(1:Nsweep,3,1)'.*hwav.SweepTime.*repmat(radar_speed',3,1)+ repmat(radar_init_pos',3,1);
-% Simulation for multiple Sweeps
 toc
 tic
 for m = 1:Nsweep

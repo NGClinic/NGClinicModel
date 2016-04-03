@@ -2,10 +2,10 @@
 % Based on Automotive Radar Example from Matlab
 %   Copyright 2012-2015 The MathWorks, Inc.
 clc
-clear
 close all
+clear
 
-
+tic
 %% Turn on and off sections of code
 PLOT.VEHICLES = 1;
 PLOT.POWER = 0;
@@ -28,10 +28,10 @@ ONE_WAY_CHANNEL = 0;
 fc = 2.43e9;  
 c = 3e8;   
 lambda = c/fc;  
-range_max = 200;   
+range_max = 80;   
 tm = 20e-3; 
-range_res = 100;  
-bw = range2bw(range_res,c);
+range_res = 1;  
+bw = 70e6; %range2bw(range_res,c);
 sweep_slope = bw/tm;        
 fr_max = range2beat(range_max,sweep_slope,c); 
 v_max = 230*1000/3600; 
@@ -39,28 +39,25 @@ fd_max = speed2dop(2*v_max,lambda);
 fb_max = fr_max+fd_max;
 fs = max(2*fb_max,bw);
 
-% fc = 77e9;
-% c = 3e8;
-% lambda = c/fc;
-% range_max = 200;
-% tm = 1.25e-3; %5.5*range2time(range_max,c);
-% range_res = 1;
-% bw = range2bw(range_res,c);
-% sweep_slope = bw/tm;
-% fr_max = range2beat(range_max,sweep_slope,c);
-% v_max = 230*1000/3600;
-% fd_max = speed2dop(2*v_max,lambda);
-% fb_max = fr_max+fd_max;
-% fs = max(2*fb_max,bw);
+% Vehicle placement
 
+% Our system
+radar_speed = 1;    %m/s, 60mph
+radar_init_pos = [0;0;0.5];
+car_speed = 26.82; % m/s, 70 mph
+car_init_pos = [5;0;0.5]'
+itfer_speed = 1;
+itfer_init_pos = [10, 2.7432, 0.5]';
+[int_rng, int_ang] = rangeangle(itfer_init_pos, radar_init_pos);
+
+toc
 %% FMCW Generation
+tic
 hwav = phased.FMCWWaveform('SweepTime',tm/2,'SweepBandwidth',bw,...
     'SampleRate',fs, 'SweepDirection', 'Triangle', 'NumSweeps', 2); %full triangle
 
 
 %% Radar Parameters
-radar_speed = 1;    %m/s, 60mph
-radar_init_pos = [0;0;0.5];
 hradarplatform = phased.Platform('InitialPosition',radar_init_pos,...
     'Velocity',[radar_speed;0;0]);
 hspec = dsp.SpectrumAnalyzer('SampleRate',fs,...
@@ -69,23 +66,17 @@ hspec = dsp.SpectrumAnalyzer('SampleRate',fs,...
     'ShowLegend',true);
 
 %% Target Model Parameters
-car_speed = 32; % m/s, 70 mph
-car_dist = 15; %radar_speed*3;     %cars should be 3 seconds away!
 car_rcs = db2pow(min(10*log10(car_dist)+5,20));
 hcar = phased.RadarTarget('MeanRCS',car_rcs,'PropagationSpeed',c,...
     'OperatingFrequency',fc);
 hcarplatform = phased.Platform('InitialPosition',...
-    [hradarplatform.InitialPosition(1)+car_dist;0;0.5],...
+    car_init_pos,...
     'Velocity',[car_speed;0;0]);
 
 %% Interference Model
 
 % Car lanes are about 10 ft --> 3.6576 m
-itfer_init_pos = [hcarplatform.InitialPosition(1)+10, 3.6576, 0.5]';
-itfer_speed = -30;
-[int_rng, int_ang] = rangeangle(itfer_init_pos, hradarplatform.InitialPosition);
 itfer_rcs = db2pow(min(10*log10(int_rng)+5,20));
-
 hitfer = phased.RadarTarget('MeanRCS',itfer_rcs,'PropagationSpeed',c,...
     'OperatingFrequency',fc);
 hitferplatform = phased.Platform('InitialPosition',...
@@ -102,7 +93,7 @@ hchannel_oneway = phased.FreeSpace('PropagationSpeed',c,...
 % % MIT Values
 ant_dia = 0.1524;   % coffee can is 6 inch. 0.1524 m.
 ant_aperture = 6.06e-4; %pi*ant_dia^2;    %6.06e-4;       % in square meter
-ant_gain = 8.4;  % value from MIT Slide deck || 10*log10((pi*ant_dia/lambda)^2);
+ant_gain = 9;  % value from MIT Slide deck || 10*log10((pi*ant_dia/lambda)^2);
 
 tx_ppower = 0.65; %db2pow(5)*1e-3;                     % in watts
 tx_gain = 24;   %9+ant_gain;                           % in dB
@@ -135,9 +126,11 @@ hrx = phased.ReceiverPreamp('Gain',rx_gain,...
     'NoiseFigure',rx_nf,...
     'LossFactor', rx_loss_factor,...
     'SampleRate',fs);
-
+toc
 %% Simulation Loop 
-Nsweep = 64;
+tic
+Nsweep = 16;
+
 
 %% Initializing zero-vectors
 radar_pos = zeros(Nsweep,3);
@@ -148,8 +141,16 @@ itfer_pos = zeros(Nsweep, 3);
 itfer_vel = zeros(Nsweep,3);
 xr = zeros(length(step(hwav)), Nsweep);
 maxdist = 10;
+beatsignal = zeros((tm/2)*fs*2*Nsweep, 1);
 
+% radar_pos(:,1) = (1:Nsweep).*hwav.SweepTime.*radar_speed(1) + radar_init_pos(1);
+% radar_pos(:,2) = (1:Nsweep).*hwav.SweepTime.*radar_speed(2) + radar_init_pos(2);
+% radar_pos(:,3) = (1:Nsweep).*hwav.SweepTime.*radar_speed(3) + radar_init_pos(3);
+
+% radar_pos = repmat(1:Nsweep,3,1)'.*hwav.SweepTime.*repmat(radar_speed',3,1)+ repmat(radar_init_pos',3,1);
 % Simulation for multiple Sweeps
+toc
+tic
 for m = 1:Nsweep
     
     % Move objects
@@ -199,10 +200,43 @@ for m = 1:Nsweep
      
     xd = dechirp(signal.xrx,signal.x);           % dechirp the signal
     xr(:,m) = xd;                             % buffer the dechirped signal
+    beatsignal((((tm/2)*fs*2)*(m-1)+1):((tm/2)*fs*2*m)) = xd;
 end
 
+toc
+%%
+% figure 
+% bs_t = 0:(1/fs):(((length(beatsignal))/fs) - (1/fs));
+% plot(bs_t, abs(beatsignal))
+% title('Beat Signal')
+% xlabel('time(s)')
+% ylabel('Amplitude')
+% grid on
+% dur = length(xd)/fs;
+% set(gca, 'xtick', [0:(dur - (1/fs)):(((length(beatsignal))/fs) - (1/fs))])
+% set(gca,'XTick',bs_t)
+% set(gca,'XTickLabel',sprintf('%1.2f|',bs_t))
+%%
+dur = length(xd)/fs;
+xd_t = 0:(1/fs):(dur - (1/fs));
+figure
+hold on
+for i=1:Nsweep
+    plot(xd_t, abs(xr(:,i)),'DisplayName', num2str(i))
+end
+legend('Location', 'eastoutside')
+title('Beat Signal')
+xlabel('time(s)')
+ylabel('amp')
 
-
+%%
+figure
+imagesc(1:32, xd_t,abs(xr));
+xlabel('Sweep Interval')
+ylabel('time (s)')
+title('Beat Signal')
+set(gca,'YDir','normal')
+colorbar
 
 %% Plot Spectrogram
 if PLOT.MUTUAL_INTERFERENCE_SPECTROGRAM
@@ -240,6 +274,8 @@ if (PLOT.POWER)
     
 end
 
+clear itfer_por itfer_speed 
+
 %% Plotting Vehicle Positions
 if (PLOT.VEHICLES)
     figure
@@ -272,6 +308,8 @@ if (PLOT.VEHICLES)
     grid
     hold off
 end
+
+
 %% Calculate Range and Doppler
 % TODO Fix
 
@@ -323,23 +361,22 @@ if (PLOT.ACCURACY)
     figure
     subplot(211);
     suptitle(['Accuracy with ' num2str(Nsweep) ' Sweeps'])
-    plot((1:Nsweep)*hwav.SweepTime*hwav.NumSweeps, rng_true, ...
-        '.-', 'DisplayName', 'Target Range (m)')
+    t = (1:Nsweep)*hwav.SweepTime*hwav.NumSweeps;
+    plot(t, rng_true, '.-', 'DisplayName', 'Target Range (m)')
     hold on
-    plot((1:Nsweep)*hwav.SweepTime*hwav.NumSweeps, rng_est, ...
-        '.-', 'DisplayName', 'Calculated Range (m)');
+    plot(t, rng_est,'.-', 'DisplayName', 'Calculated Range (m)');
     legend('Location', 'eastoutside'); title('Range'); ylabel('m'); xlabel('s');
 %     axis([0 0.08 8 11.1])
-    
+    xlim([0, Nsweep*hwav.SweepTime*hwav.NumSweeps])
+
+   
     subplot(212);
-    plot((1:Nsweep)*hwav.SweepTime*hwav.NumSweeps, ...
-       -(radar_speed-car_speed)*ones(Nsweep,1), ...
+    plot(t, -(radar_speed-car_speed)*ones(Nsweep,1), ...
         '.-', 'DisplayName', 'Target Speed (m/s)')
     hold on
-    plot((1:Nsweep)*hwav.SweepTime*hwav.NumSweeps, -v_est,...
-        '.-', 'DisplayName', 'Calculated Speed (m/s)');
+    plot(t, -v_est, '.-', 'DisplayName', 'Calculated Speed (m/s)');
     hold off
     legend('Location', 'eastoutside')
-    axis([0 0.08 30.99 31.01])
+    xlim([0, Nsweep*hwav.SweepTime*hwav.NumSweeps])
     title('Velocity'); ylabel('m/s');  xlabel('s');
 end

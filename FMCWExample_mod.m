@@ -38,21 +38,21 @@ v_max = 230*1000/3600;
 fd_max = speed2dop(2*v_max,lambda);
 fb_max = fr_max+fd_max;
 fs = max(2*fb_max,bw);
+Nsweep = 8;
 
-% Vehicle placement
-
+%% Vehicle placement
 % Our system
 radar_speed = 1;    %m/s, 60mph
 radar_init_pos = [0;0;0.5];
 car_speed = 26.82; % m/s, 70 mph
-car_init_pos = [5;0;0.5]'
+car_init_pos = [5;0;0.5];
+[car_rng, ~] = rangeangle(car_init_pos, radar_init_pos);
 itfer_speed = 1;
 itfer_init_pos = [10, 2.7432, 0.5]';
 [int_rng, int_ang] = rangeangle(itfer_init_pos, radar_init_pos);
 
 toc
 %% FMCW Generation
-tic
 hwav = phased.FMCWWaveform('SweepTime',tm/2,'SweepBandwidth',bw,...
     'SampleRate',fs, 'SweepDirection', 'Triangle', 'NumSweeps', 2); %full triangle
 
@@ -66,7 +66,7 @@ hspec = dsp.SpectrumAnalyzer('SampleRate',fs,...
     'ShowLegend',true);
 
 %% Target Model Parameters
-car_rcs = db2pow(min(10*log10(car_dist)+5,20));
+car_rcs = db2pow(min(10*log10(car_rng)+5,20));
 hcar = phased.RadarTarget('MeanRCS',car_rcs,'PropagationSpeed',c,...
     'OperatingFrequency',fc);
 hcarplatform = phased.Platform('InitialPosition',...
@@ -114,23 +114,21 @@ hrx = phased.ReceiverPreamp('Gain',rx_gain,...
     'SampleRate',fs);
 toc
 %% Simulation Loop 
-tic
-Nsweep = 16;
 
-
-%% Initializing zero-vectors
+%Initializing zero-vectors
 radar_pos = zeros(Nsweep,3);
 radar_vel = zeros(Nsweep,3);
 tgt_pos = zeros(Nsweep,3);
 tgt_vel = zeros(Nsweep, 3);
 itfer_pos = zeros(Nsweep, 3);
 itfer_vel = zeros(Nsweep,3);
-xr = zeros(length(step(hwav)), Nsweep);
 maxdist = 10;
-beatsignal = zeros((tm/2)*fs*2*Nsweep, 1);
-
+n = 10e3;
+fs_bs = fs/n;
+xr = zeros(length(step(hwav))/n, Nsweep);
+beatsignal = zeros((tm/2)*fs_bs*2*Nsweep, 1);
 toc
-tic
+%%
 for m = 1:Nsweep
     
     % Move objects
@@ -178,27 +176,28 @@ for m = 1:Nsweep
         signal.xrx = step(hrx,signal.xdone);
     end
      
-    xd = dechirp(signal.xrx,signal.x);           % dechirp the signal
+    xd = downsample(dechirp(signal.xrx,signal.x),n);           % dechirp the signal
     xr(:,m) = xd;                             % buffer the dechirped signal
-    beatsignal((((tm/2)*fs*2)*(m-1)+1):((tm/2)*fs*2*m)) = xd;
+    beatsignal((((tm/2)*fs_bs*2)*(m-1)+1):((tm/2)*fs_bs*2*m)) = xd;
 end
 
 toc
 %%
-% figure 
-% bs_t = 0:(1/fs):(((length(beatsignal))/fs) - (1/fs));
-% plot(bs_t, abs(beatsignal))
-% title('Beat Signal')
-% xlabel('time(s)')
-% ylabel('Amplitude')
-% grid on
-% dur = length(xd)/fs;
-% set(gca, 'xtick', [0:(dur - (1/fs)):(((length(beatsignal))/fs) - (1/fs))])
-% set(gca,'XTick',bs_t)
-% set(gca,'XTickLabel',sprintf('%1.2f|',bs_t))
-%%
-dur = length(xd)/fs;
-xd_t = 0:(1/fs):(dur - (1/fs));
+figure(1)
+subplot(211)
+bs_t = (0:(1/fs_bs):(((length(beatsignal))/fs_bs) - (1/fs_bs)))*1000;
+plot(bs_t, abs(beatsignal))
+title('Beat Signal')
+xlabel('time(ms)')
+ylabel('Amplitude')
+subplot(212)
+NFFT = 2^nextpow2(length(beatsignal));
+f = (((-NFFT/2)+1):(NFFT/2))*(fs_bs/NFFT);
+plot(f, fftshift(abs(fft(beatsignal, NFFT))))
+toc
+%% Plot beat signal overlapped
+dur = length(xd)/fs_bs;
+xd_t = 0:(1/fs_bs):(dur - (1/fs_bs));
 figure
 hold on
 for i=1:Nsweep
@@ -209,7 +208,7 @@ title('Beat Signal')
 xlabel('time(s)')
 ylabel('amp')
 
-%%
+%% Plot color map of beat signal
 figure
 imagesc(1:32, xd_t,abs(xr));
 xlabel('Sweep Interval')
@@ -217,16 +216,16 @@ ylabel('time (s)')
 title('Beat Signal')
 set(gca,'YDir','normal')
 colorbar
-
+toc
 %% Plot Spectrogram
 if PLOT.MUTUAL_INTERFERENCE_SPECTROGRAM
     mult = 2^4;
     figure
     subplot(211)
-    spectrogram(step(hrx, xdone), 32*mult, 16*mult, 32*mult, fs, 'yaxis')
+    spectrogram(step(hrx, xdone), 32*mult, 16*mult, 32*mult, fs_bs, 'yaxis')
     title('No Mutual Interference')
     subplot(212)
-    spectrogram(xrx, 32*mult, 16*mult, 32*mult, fs,'yaxis')
+    spectrogram(xrx, 32*mult, 16*mult, 32*mult, fs_bs,'yaxis')
     title('With Mutual Interference')
     suptitle('Spectrogram Interference Effects')
 end 
@@ -293,8 +292,8 @@ end
 %% Calculate Range and Doppler
 % TODO Fix
 
-xr_upsweep = xr(1:hwav.SweepTime*fs,:);
-xr_downsweep = xr((hwav.SweepTime*fs):end, :);
+xr_upsweep = xr(1:hwav.SweepTime*fs_bs,:);
+xr_downsweep = xr((hwav.SweepTime*fs_bs):end, :);
 % if (1)
 %     figure
 %     hrdresp = phased.RangeDopplerResponse('PropagationSpeed',c,...
@@ -317,8 +316,8 @@ xr_downsweep = xr((hwav.SweepTime*fs):end, :);
 Ncalc = floor(Nsweep/4);
 
 
-fbu_rng = rootmusic(pulsint(xr_upsweep,'coherent'),1,fs);
-fbd_rng = rootmusic(pulsint(xr_downsweep,'coherent'),1,fs);
+fbu_rng = rootmusic(pulsint(xr_upsweep,'coherent'),1,fs_bs);
+fbd_rng = rootmusic(pulsint(xr_downsweep,'coherent'),1,fs_bs);
 output.rng_est = beat2range([fbu_rng fbd_rng],sweep_slope,c)/2;
 fd = -(fbu_rng+fbd_rng)/2;
 output.v_est = dop2speed(fd,lambda)/2;
@@ -327,8 +326,8 @@ rng_est = zeros(Nsweep,1);
 rng_true = zeros(Nsweep,1);
 v_est = zeros(Nsweep, 1);
 for i = 1:Nsweep
-    fbu_rng = rootmusic(pulsint(xr_upsweep(:,i),'coherent'),1,fs);
-    fbd_rng = rootmusic(pulsint(xr_downsweep(:,i),'coherent'),1,fs);
+    fbu_rng = rootmusic(pulsint(xr_upsweep(:,i),'coherent'),1,fs_bs);
+    fbd_rng = rootmusic(pulsint(xr_downsweep(:,i),'coherent'),1,fs_bs);
     rng_est(i) = beat2range([fbu_rng fbd_rng],sweep_slope,c)/2;
     fd = -(fbu_rng+fbd_rng)/2;
     v_est(i) = dop2speed(fd,lambda)/2;
@@ -360,3 +359,4 @@ if (PLOT.ACCURACY)
     xlim([0, Nsweep*hwav.SweepTime*hwav.NumSweeps])
     title('Velocity'); ylabel('m/s');  xlabel('s');
 end
+toc

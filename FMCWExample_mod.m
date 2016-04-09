@@ -250,55 +250,6 @@ ylabel('|fft|')
 xlim([-4000 4000])
 
 
-%% Plot beat signal overlapped
-% xd_t = 0:(1/fs_bs):(dur - (1/fs_bs));
-% figure(2)
-% if MUTUAL_INTERFERENCE
-%     for i=1:Nsweep
-%         subplot(211)
-%         hold on
-%         plot(xd_t, abs(xr.NoINT(:,i)),'DisplayName', num2str(i))
-%         hold off
-%         subplot(212)
-%         hold on
-%         plot(xd_t, abs(xr.INT(:,i)),'DisplayName', num2str(i))
-%         hold off
-%     end
-%     subplot(211)
-%     title('Beat Signal without Interferer')
-%     xlabel('time(s)')
-%     ylabel('amp')
-%     subplot(212)
-%     title('Beat Signal with Interferer')
-%     xlabel('time(s)')
-%     ylabel('amp')
-% else
-%     for i=1:Nsweep
-%         hold on
-%         plot(xd_t, abs(xr.NoINT(:,i)),'DisplayName', num2str(i))
-%         hold off
-%     end
-%     legend('Location', 'eastoutside')
-%     title('Beat Signal without Interferer')
-%     xlabel('time(s)')
-%     ylabel('amp')
-% end
-
-
-%% Plot Spectrogram
-% if PLOT.MUTUAL_INTERFERENCE_SPECTROGRAM && MUTUAL_INTERFERENCE
-%     mult = 2^4;
-%     figure
-%     subplot(211)
-%     spectrogram(signal.xrx_NoINT), 32*mult, 16*mult, 32*mult, fs_bs, 'yaxis')
-%     title('No Mutual Interference')
-%     subplot(212)
-%     spectrogram(signal.xrx_INT, 32*mult, 16*mult, 32*mult, fs_bs,'yaxis')
-%     title('With Mutual Interference')
-%     suptitle('Spectrogram Interference Effects')
-% end 
-
-
 %% Plotting Spectral Density
 if (PLOT.POWER)
     field = fieldnames(signal);
@@ -357,35 +308,15 @@ if (PLOT.VEHICLES)
 end
 
 
-%% Calculate Range and Doppler
-% TODO Fix
 
-
+%% Process beat signal for calculations
+xr_upsweep_NoINT = xr.NoINT(1:hwav.SweepTime*fs_bs,:);
+xr_downsweep_NoINT = xr.NoINT((hwav.SweepTime*fs_bs):end, :);
 
 if MUTUAL_INTERFERENCE
     xr_upsweep_INT = xr.INT(1:hwav.SweepTime*fs_bs,:);
     xr_downsweep_INT = xr.INT((hwav.SweepTime*fs_bs):end, :);
 end
-xr_upsweep_NoINT = xr.NoINT(1:hwav.SweepTime*fs_bs,:);
-xr_downsweep_NoINT = xr.NoINT((hwav.SweepTime*fs_bs):end, :);
-%% Range Doppler
-% if (1)
-%     figure
-%     hrdresp = phased.RangeDopplerResponse('PropagationSpeed',c,...
-%         'DopplerOutput','Speed',...
-%         'OperatingFrequency',fc,...
-%         'SampleRate',fs,...
-%         'RangeMethod','FFT',...
-%         'DechirpInput', false,...
-%         'SweepSlope',sweep_slope,...
-%         'RangeFFTLengthSource','Property','RangeFFTLength',2048,...
-%         'DopplerFFTLengthSource','Property','DopplerFFTLength',256);
-% 
-%     clf;
-%     plotResponse(hrdresp,xr_upsweep)                    % Plot range Doppler map
-%   %  axis([-v_max v_max 0 range_max])
-%     clim = caxis;
-% end
 
 %% Calculation Range Distance
 Ncalc = floor(Nsweep/4);
@@ -460,8 +391,6 @@ if (PLOT.ACCURACY)
     xlim([0, Nsweep*hwav.SweepTime*hwav.NumSweeps])
     title('Velocity'); ylabel('m/s');  xlabel('s');
     
-  
-    
-    
+     
 end
 toc

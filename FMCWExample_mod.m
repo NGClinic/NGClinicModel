@@ -91,11 +91,13 @@ hitferplatform = phased.Platform('InitialPosition',...
     itfer_init_pos,...
     'Velocity',[itfer_speed;0;0]);
 
+
 %% Free Space Channel Set Up ----------------------------------
 hchannel_twoway = phased.FreeSpace('PropagationSpeed',c,...
     'OperatingFrequency',fc,'SampleRate',fs,'TwoWayPropagation',true);
 hchannel_oneway = phased.FreeSpace('PropagationSpeed',c,...
     'OperatingFrequency',fc,'SampleRate',fs,'TwoWayPropagation',false);
+
 
 %% Antenna Model Set Up ----------------------------------------------
 % % MIT Values
@@ -120,6 +122,7 @@ hrx = phased.ReceiverPreamp('Gain',rx_gain,...
     'NoiseFigure',rx_nf,...
     'LossFactor', rx_loss_factor,...
     'SampleRate',fs);
+
 
 %% Simulation Loop ---------------------------------------------------
 
@@ -168,8 +171,7 @@ for m = 1:Nsweep
             tgt_vel(m,:)');                     % Propagate signal
         signal.xtgt = step(hcar,signal.xp);        % Reflect the signal
     end
-    
-   
+       
     % Interfering Signal
     if MUTUAL_INTERFERENCE
         % Beat signal without inteference
@@ -224,7 +226,6 @@ if MUTUAL_INTERFERENCE
     xlabel('freq (Hz)')
     ylabel('|fft|')
     xlim([-4000 4000])
-
 end
 
 figure(1)
@@ -247,7 +248,6 @@ title('FFT')
 xlabel('freq (Hz)')
 ylabel('|fft|')
 xlim([-4000 4000])
-
 
 
 %% Plot beat signal overlapped

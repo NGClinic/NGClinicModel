@@ -1,12 +1,11 @@
-%% FMCW Example
+%% FMCW Example -----------------------------------------------------------
 % Based on Automotive Radar Example from Matlab
 %   Copyright 2012-2015 The MathWorks, Inc.
 clc
 clear
 close all
-
 tic
-%% Turn on and off sections of code --------------------------
+%% Turn on and off sections of code ---------------------------------------
 PLOT.VEHICLES = 1;
 PLOT.POWER = 0;
 PLOT.ACCURACY = 1;
@@ -20,17 +19,14 @@ ONE_WAY_CHANNEL = 0;
 % Scenario 3 == Interferer in opposing lane, target;
 % Scenario 4 == Direct interference
 
-
-%% FMCWsimsetup --------------------------------------------------
-
-%% System waveform parameters ----------------------------------------
+%% System waveform parameters ---------------------------------------------
 fc = 2.43e9;  
 c = 3e8;   
 lambda = c/fc;  
 range_max = 80;   
 tm = 20e-3; 
-range_res = 1;  
-bw = 70e6; %range2bw(range_res,c);
+rangeRes = 1;  
+bw = 70e6; %range2bw(rangeRes,c);
 sweep_slope = bw/tm;        
 fr_max = range2beat(range_max,sweep_slope,c); 
 v_max = 230*1000/3600; 
@@ -41,12 +37,17 @@ Nsweep = 8;
 n = 2.5e3;
 fs_bs = fs/n;
 
-%% Interferer waveform parameters ---------------------------------
+% Antenna Model
+load('SampleRadiationPatterns.mat', 'TPLink');
+ant = TPLink;
+
+clear range_max rangeRez fr_max v_max fd_max fb_max TPLink
+%% Interferer waveform parameters -----------------------------------------
 bw_INT = bw; %40e6;
-tm_INT = tm/2;
+tm_INT = tm;
 
 
-%% Vehicle placement -----------------------------------------------
+%% Vehicle placement ------------------------------------------------------
 % Our system
 radar_speed = 1;    %m/s
 radar_init_pos = [0;0;0.5]; %m
@@ -54,18 +55,18 @@ car_speed = 30; % m/s,
 car_init_pos = [5;0;0.5];   %m
 itfer_speed = 0;
 itfer_init_pos = [10, 2.7432, 0.5]';
-[car_rng, ~] = rangeangle(car_init_pos, radar_init_pos);
+[tgt_rng, tgt_ang] = rangeangle(car_init_pos, radar_init_pos);
 [int_rng, int_ang] = rangeangle(itfer_init_pos, radar_init_pos);
 
-%% FMCW Generation --------------------------------------------------
+%% FMCW Generation --------------------------------------------------------
 hwav = phased.FMCWWaveform('SweepTime',tm/2,'SweepBandwidth',bw,...
     'SampleRate',fs, 'SweepDirection', 'Triangle', 'NumSweeps', 2); %full triangle
 
 hwav_INT = phased.FMCWWaveform('SweepTime',tm_INT/2,'SweepBandwidth',bw_INT,...
-    'SampleRate',fs, 'SweepDirection', 'Triangle', 'NumSweeps', 4); %full triangle
+    'SampleRate',fs, 'SweepDirection', 'Triangle', 'NumSweeps', 2); %full triangle
 
 
-%% Radar Parameters -----------------------------------------------
+%% Radar Parameters -------------------------------------------------------
 hradarplatform = phased.Platform('InitialPosition',radar_init_pos,...
     'Velocity',[radar_speed;0;0]);
 hspec = dsp.SpectrumAnalyzer('SampleRate',fs,...
@@ -73,15 +74,16 @@ hspec = dsp.SpectrumAnalyzer('SampleRate',fs,...
     'Title','Spectrum for received and dechirped signal',...
     'ShowLegend',true);
 
-%% Target Model Parameters --------------------------------------
-car_rcs = db2pow(min(10*log10(car_rng)+5,20));
+%% Target Model Parameters ------------------------------------------------
+% Radar cross section for a human
+car_rcs = db2pow(min(10*log10(tgt_rng)+5,20));
 hcar = phased.RadarTarget('MeanRCS',car_rcs,'PropagationSpeed',c,...
     'OperatingFrequency',fc);
 hcarplatform = phased.Platform('InitialPosition',...
     car_init_pos,...
     'Velocity',[car_speed;0;0]);
 
-%% Interference Model ------------------------------------------
+%% Interference Model -----------------------------------------------------
 
 % Car lanes are about 10 ft --> 3.6576 m
 itfer_rcs = db2pow(min(10*log10(int_rng)+5,20));
@@ -92,39 +94,40 @@ hitferplatform = phased.Platform('InitialPosition',...
     'Velocity',[itfer_speed;0;0]);
 
 
-%% Free Space Channel Set Up ----------------------------------
+%% Free Space Channel Set Up ----------------------------------------------
 hchannel_twoway = phased.FreeSpace('PropagationSpeed',c,...
     'OperatingFrequency',fc,'SampleRate',fs,'TwoWayPropagation',true);
 hchannel_oneway = phased.FreeSpace('PropagationSpeed',c,...
     'OperatingFrequency',fc,'SampleRate',fs,'TwoWayPropagation',false);
 
 
-%% Antenna Model Set Up ----------------------------------------------
+%% Antenna Model Set Up ---------------------------------------------------
 % % MIT Values
-ant_dia = 0.1524;   % coffee can is 6 inch. 0.1524 m.
-ant_aperture = 6.06e-4; %pi*ant_dia^2;    %6.06e-4;       % in square meter
-ant_gain = 9;  % value from MIT Slide deck || 10*log10((pi*ant_dia/lambda)^2);
+antGain = 9;  % value from MIT Slide deck || 10*log10((pi*ant_dia/lambda)^2);
+txPower = 0.65; %db2pow(5)*1e-3;                     % in watts
+txGain = 13.4 + antGain;                           % in dB
+txLossFactor = 0;                             % in dB **TODO**
 
-tx_ppower = 0.65; %db2pow(5)*1e-3;                     % in watts
-tx_gain = 24;   %9+ant_gain;                           % in dB
-tx_loss_factor = 0;                             % in dB **TODO**
-
-rx_power = 1;   %Watt
 % IF Power = -28 dBm
-rx_gain = 15+ant_gain;                          % in dB
-rx_nf = 4.5;                                    % in dB
-rx_loss_factor = 0;                             % in dB **TODO
+rxGain = 1+antGain;                          % in dB
+rxNF = 4.5;                                    % in dB
+rxLossFactor = 0;                             % in dB **TODO
 
-htx = phased.Transmitter('PeakPower',tx_ppower,...
-    'Gain',tx_gain,...
-    'LossFactor',tx_loss_factor);
-hrx = phased.ReceiverPreamp('Gain',rx_gain,...
-    'NoiseFigure',rx_nf,...
-    'LossFactor', rx_loss_factor,...
+htx = phased.Transmitter('PeakPower',txPower,...
+    'Gain',txGain,...
+    'LossFactor',txLossFactor);
+hrx = phased.ReceiverPreamp('Gain',rxGain,...
+    'NoiseFigure',rxNF,...
+    'LossFactor', rxLossFactor,...
     'SampleRate',fs);
 
+htx_INT = phased.Transmitter('PeakPower',txPower,...
+    'Gain',txGain,...
+    'LossFactor',txLossFactor);
 
-%% Simulation Loop ---------------------------------------------------
+clear antGain txPower tx Gain txLossFactor rxPower rxGain rxNF
+clear rxLossFactor rxGain rxNF rxLossFactor
+%% Simulation Loop --------------------------------------------------------
 
 %Initializing zero-vectors
 radar_pos = zeros(Nsweep,3);
@@ -139,6 +142,14 @@ xr.INT = zeros(length(step(hwav))/n, Nsweep);
 beatsignal.NoINT = zeros((tm/2)*fs_bs*2*Nsweep, 1);
 toc
 for m = 1:Nsweep
+    [tgt_rng, tgt_angle] = rangeangle(car_init_pos, radar_init_pos);
+    [int_rng, int_ang] = rangeangle(itfer_init_pos, radar_init_pos);
+    
+    % Release so you can change object parameters
+    release(htx); release(hrx); release(htx_INT);
+    htx.Gain = interp1(ant.az, ant.azdB, tgt_ang(1));
+    hrx.Gain = interp1(ant.az, ant.azdB, -tgt_ang(1));
+    htx_INT.Gain = interp1(ant.az, ant.azdB, int_ang(1));
     
     % Move objects
     [radar_pos(m,:),radar_vel(m,:)] = step(...
@@ -173,84 +184,39 @@ for m = 1:Nsweep
     end
        
     % Interfering Signal
+    % Beat signal without inteference
+    signal.xrx = step(hrx,signal.xtgt); % receive the signal
+    xd = downsample(dechirp(signal.xrx,signal.x),n); % dechirp the signal
+    
+    
+    
+    xr.NoINT(:,m) = xd;                             % buffer the dechirped signal
+    beatsignal.NoINT((((tm/2)*fs_bs*2)*(m-1)+1):((tm/2)*fs_bs*2*m)) = xd;
+       
     if MUTUAL_INTERFERENCE
-        % Beat signal without inteference
-        signal.xrx = step(hrx,signal.xtgt); % receive the signal
-        xd = downsample(dechirp(signal.xrx,signal.x),n); % dechirp the signal
-        xr.NoINT(:,m) = xd;                             % buffer the dechirped signal
-        beatsignal.NoINT((((tm/2)*fs_bs*2)*(m-1)+1):((tm/2)*fs_bs*2*m)) = xd;
-        
         % Beat signal with interference
         xitfer_gen = step(hwav_INT);                % Generate interfer signal
-        xitfer_t = step(htx, xitfer_gen);       % Transmit interfer signal
+        xitfer_t = step(htx_INT, xitfer_gen);       % Transmit interfer signal
         signal.xitfer = step(hchannel_oneway, xitfer_t, ...
             itfer_pos(m,:)', radar_pos(m,:)',...
             itfer_vel(m,:)', radar_vel(m,:)');  % Propagate through channel       
         signal.xrx = step(hrx,(signal.xtgt + signal.xitfer));  % receive the signal
         xd = downsample(dechirp(signal.xrx,signal.x),n); % dechirp the signal
+        
         xr.INT(:,m) = xd;                             % buffer the dechirped signal
         beatsignal.INT((((tm/2)*fs_bs*2)*(m-1)+1):((tm/2)*fs_bs*2*m)) = xd;
-        
-    else
-        signal.xrx = step(hrx,signal.xtgt); % receive the signal
-        % Beat signal without interference
-        xd = downsample(dechirp(signal.xrx,signal.x),n); % dechirp the signal
-        xr.NoINT(:,m) = xd;                             % buffer the dechirped signal
-        beatsignal.NoINT((((tm/2)*fs_bs*2)*(m-1)+1):((tm/2)*fs_bs*2*m)) = xd;
     end
+        
+ 
+    
    
     
 end
 clear xd
 toc
-%% Plot Beat Signal TD and FD
 
 
-if MUTUAL_INTERFERENCE
-    figure(2)
-    subplot(211)
-    dur = length(xr.INT(:,1))/fs_bs;
-    bs_t = (0:(1/fs_bs):(((length(beatsignal.INT))/fs_bs) - (1/fs_bs)))*1000;
-    plot(bs_t, abs(beatsignal.INT))
-    title('Beat Signal with Interference')
-    xlabel('time(ms)')
-    ylabel('Amplitude')
-    set(gca, 'xtick', [0:(dur - (1/fs_bs)):(((length(beatsignal.INT))/fs_bs) - (1/fs_bs))].*1000)
-    grid on
-
-    subplot(212)
-    NFFT = 2^nextpow2(length(beatsignal.INT));
-    f = (((-NFFT/2)):(NFFT/2-1))*(fs_bs/NFFT);
-    plot(f, fftshift(abs(fft(beatsignal.INT, NFFT))))
-    title('FFT')
-    xlabel('freq (Hz)')
-    ylabel('|fft|')
-    xlim([-4000 4000])
-end
-
-figure(1)
-subplot(211)
-dur = length(xr.NoINT(:,1))/fs_bs;
-bs_t = (0:(1/fs_bs):(((length(beatsignal.NoINT))/fs_bs) - (1/fs_bs)))*1000;
-plot(bs_t, abs(beatsignal.NoINT))
-title('Beat Signal without Interference')
-xlabel('time(ms)')
-ylabel('Amplitude')
-% set(gca, 'xtick', [0:(dur - (1/fs_bs)):(((length(beatsignal.NoINT))/fs_bs) - (1/fs_bs))].*1000)
-% set(gca, 'XTickLabel', num2str(get(gca, 'XTick')', '%1.1f'));
-grid on
-
-subplot(212)
-NFFT = 2^nextpow2(length(beatsignal.NoINT));
-f = (((-NFFT/2)):(NFFT/2-1))*(fs_bs/NFFT);
-plot(f, fftshift(abs(fft(beatsignal.NoINT, NFFT))))
-title('FFT')
-xlabel('freq (Hz)')
-ylabel('|fft|')
-xlim([-4000 4000])
-
-
-%% Plotting Spectral Density
+%% Plotting Spectral Density ----------------------------------------------
 if (PLOT.POWER)
     field = fieldnames(signal);
     figure
@@ -272,41 +238,19 @@ if (PLOT.POWER)
     
 end
 
-clear itfer_por itfer_speed 
+clear signal itfer_por itfer_speed 
 
-%% Plotting Vehicle Positions
-if (PLOT.VEHICLES)
-    figure
-    radar_pos_x = radar_pos(:,1);
-    radar_pos_y = radar_pos(:,2);
-    radar_pos_z = radar_pos(:,3);
-    tgt_pos_x = tgt_pos(:,1);
-    tgt_pos_y = tgt_pos(:,2);
-    tgt_pos_z = tgt_pos(:,3);
-    int_pos_x = itfer_pos(:,1);
-    int_pos_y = itfer_pos(:,2);
-    int_pos_z = itfer_pos(:,3);
-    hold on
-    plot(radar_pos_x,radar_pos_y, 'g-', 'DisplayName','Our Radar');
-    plot(radar_pos_x(1),radar_pos_y(1), 'go', 'DisplayName', 'Start');
-    plot(radar_pos_x(Nsweep),radar_pos_y(Nsweep), 'gx', 'DisplayName', 'End');
+%% Plot Beat Signal TD and FD ---------------------------------------------
+plotBeatSignal(beatsignal.NoINT, fs_bs, 'Beat Signal without Interference')
 
-    plot(tgt_pos_x, tgt_pos_y, 'k-', 'DisplayName', 'Target System');
-    plot(tgt_pos_x(1), tgt_pos_y(1), 'ko', 'DisplayName', 'Start');
-    plot(tgt_pos_x(Nsweep), tgt_pos_y(Nsweep), 'kx', 'DisplayName', 'End');
-    if (MUTUAL_INTERFERENCE)
-        plot(int_pos_x, int_pos_y, 'r-', 'DisplayName', 'Interferer System');
-        plot(int_pos_x(1), int_pos_y(1), 'ro', 'DisplayName', 'Start');
-        plot(int_pos_x(Nsweep), int_pos_y(Nsweep), 'rx', 'DisplayName', 'End');
-    end
-    xlabel('X (m)')
-    ylabel('Y (m)')
-    legend('Location', 'eastoutside')
-    title('Position of Vehicles')
-    grid
-    hold off
+if MUTUAL_INTERFERENCE
+    plotBeatSignal(beatsignal.INT, fs_bs, 'Beat Signal with Interference')
 end
 
+%clear bs_t beatsignal
+%% Plotting Vehicle Positions ---------------------------------------------
+plotVehiclePositions(radar_pos, tgt_pos, itfer_pos, ...
+        PLOT.VEHICLES, MUTUAL_INTERFERENCE);
 
 
 %% Process beat signal for calculations
@@ -318,9 +262,8 @@ if MUTUAL_INTERFERENCE
     xr_downsweep_INT = xr.INT((hwav.SweepTime*fs_bs):end, :);
 end
 
-%% Calculation Range Distance
+%% Calculation Range Distance ---------------------------------------------
 Ncalc = floor(Nsweep/4);
-
 
 fbu_rng_NoINT = rootmusic(pulsint(xr_upsweep_NoINT,'coherent'),1,fs_bs);
 fbd_rng_NoINT = rootmusic(pulsint(xr_downsweep_NoINT,'coherent'),1,fs_bs);
@@ -358,8 +301,9 @@ if MUTUAL_INTERFERENCE
     end
 end
 
-%% Plot accuracy of calculations
-
+clear fd_INT fbd_rng_INT fbu_rng_INT fbu_rng_NoINT fbd_rng_NoINT fd_NoINT
+clear xr_upsweep_NoINT xr_downsweep_NoINT xr_upsweep_INT xr_downsweep_NoINT
+%% Plot accuracy of calculations ------------------------------------------
 if (PLOT.ACCURACY)
     figure
     subplot(211);

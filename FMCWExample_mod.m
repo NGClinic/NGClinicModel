@@ -9,23 +9,18 @@ tic
 PLOT.VEHICLES = 1;
 PLOT.POWER = 0;
 PLOT.ACCURACY = 1;
-PLOT.CHIRP = 0;
-PLOT.MUTUAL_INTERFERENCE_SPECTROGRAM = 0;
 MUTUAL_INTERFERENCE= 1;
 ONE_WAY_CHANNEL = 0;
+SAVE = 1;
 
-% Scenario 1 == No interferer
-% Scenario 2 == Interferer in opposing lane, no target objects
-% Scenario 3 == Interferer in opposing lane, target;
-% Scenario 4 == Direct interference
+fileName = 'scen4_wave1_outOfPhase1.mat';
 
 %% System waveform parameters ---------------------------------------------
-fc = 2.43e9;  
+fc = 2.445e9;  
 c = 3e8;   
 lambda = c/fc;  
 range_max = 80;   
 tm = 20e-3; 
-rangeRes = 1;  
 bw = 70e6; %range2bw(rangeRes,c);
 sweep_slope = bw/tm;        
 fr_max = range2beat(range_max,sweep_slope,c); 
@@ -33,7 +28,7 @@ v_max = 230*1000/3600;
 fd_max = speed2dop(2*v_max,lambda);
 fb_max = fr_max+fd_max;
 fs = max(2*fb_max,bw);
-Nsweep = 8;
+Nsweep = 16;
 n = 2.5e3;
 fs_bs = fs/n;
 
@@ -41,38 +36,35 @@ fs_bs = fs/n;
 load('SampleRadiationPatterns.mat', 'TPLink');
 ant = TPLink;
 
-clear range_max rangeRez fr_max v_max fd_max fb_max TPLink
+clear range_max rangeRes fr_max v_max fd_max fb_max TPLink
 %% Interferer waveform parameters -----------------------------------------
-bw_INT = bw; %40e6;
+bw_INT = bw%*0.2577; %40e6;
 tm_INT = tm;
-
+dur = (tm)*(Nsweep-1);
 
 %% Vehicle placement ------------------------------------------------------
 % Our system
-radar_speed = 1;    %m/s
+radar_speed = 0;    %m/s
 radar_init_pos = [0;0;0.5]; %m
-car_speed = 30; % m/s, 
+car_speed = 10/dur; % m/s, 
 car_init_pos = [5;0;0.5];   %m
-itfer_speed = 0;
-itfer_init_pos = [10, 2.7432, 0.5]';
-[tgt_rng, tgt_ang] = rangeangle(car_init_pos, radar_init_pos);
-[int_rng, int_ang] = rangeangle(itfer_init_pos, radar_init_pos);
+itfer_speed = car_speed;%0;
+itfer_init_pos = car_init_pos; %[10, 3.048, 0.5]';
+[tgt_rng, ~] = rangeangle(car_init_pos, radar_init_pos);
+[int_rng, ~] = rangeangle(itfer_init_pos, radar_init_pos);
+
 
 %% FMCW Generation --------------------------------------------------------
 hwav = phased.FMCWWaveform('SweepTime',tm/2,'SweepBandwidth',bw,...
     'SampleRate',fs, 'SweepDirection', 'Triangle', 'NumSweeps', 2); %full triangle
 
 hwav_INT = phased.FMCWWaveform('SweepTime',tm_INT/2,'SweepBandwidth',bw_INT,...
-    'SampleRate',fs, 'SweepDirection', 'Triangle', 'NumSweeps', 2); %full triangle
+    'SampleRate',fs, 'SweepDirection', 'Triangle', 'NumSweeps',2*(tm/tm_INT)); %full triangle
 
 
 %% Radar Parameters -------------------------------------------------------
 hradarplatform = phased.Platform('InitialPosition',radar_init_pos,...
     'Velocity',[radar_speed;0;0]);
-hspec = dsp.SpectrumAnalyzer('SampleRate',fs,...
-    'PlotAsTwoSidedSpectrum',true,...
-    'Title','Spectrum for received and dechirped signal',...
-    'ShowLegend',true);
 
 %% Target Model Parameters ------------------------------------------------
 % Radar cross section for a human
@@ -130,56 +122,59 @@ clear rxLossFactor rxGain rxNF rxLossFactor
 %% Simulation Loop --------------------------------------------------------
 
 %Initializing zero-vectors
-radar_pos = zeros(Nsweep,3);
-radar_vel = zeros(Nsweep,3);
-tgt_pos = zeros(Nsweep,3);
-tgt_vel = zeros(Nsweep, 3);
-itfer_pos = zeros(Nsweep, 3);
-itfer_vel = zeros(Nsweep,3);
-maxdist = 10;
+radarPos = zeros(Nsweep,3);
+radarVel = zeros(Nsweep,3);
+tgtPos = zeros(Nsweep,3);
+tgtVel = zeros(Nsweep, 3);
+itferPos = zeros(Nsweep, 3);
+itferVel = zeros(Nsweep,3);
+maxDist = 10;
 xr.NoINT = zeros(length(step(hwav))/n, Nsweep);
 xr.INT = zeros(length(step(hwav))/n, Nsweep);
 beatsignal.NoINT = zeros((tm/2)*fs_bs*2*Nsweep, 1);
+beatsignal.INT = zeros((tm/2)*fs_bs*2*Nsweep, 1);
+beatsignal.INTonly = zeros((tm/2)*fs_bs*2*Nsweep, 1);
 toc
-for m = 1:Nsweep
-    [tgt_rng, tgt_angle] = rangeangle(car_init_pos, radar_init_pos);
-    [int_rng, int_ang] = rangeangle(itfer_init_pos, radar_init_pos);
+for m = 1:Nsweep   
+    % Move objects
+    [radarPos(m,:),radarVel(m,:)] = step(...
+        hradarplatform,hwav.SweepTime*hwav.NumSweeps);   % radar moves during sweep
+    [tgtPos(m,:),tgtVel(m,:)] = step(hcarplatform,... 
+        hwav.SweepTime*hwav.NumSweeps);                  % car moves during sweep
+    [itferPos(m,:), itferVel(m,:)] = step(hitferplatform,...
+        hwav.SweepTime*hwav.NumSweeps);                  % interferer moves during sweep
+  
+    % Calculate angle
+    tgt_ang = atan2(tgtPos(m,2) - radarPos(m,2), tgtPos(m,1) - radarPos(m,1));
+    int_ang = atan2(itferPos(m,2) - radarPos(m,2), itferPos(m,1) - radarPos(m,1));
     
     % Release so you can change object parameters
     release(htx); release(hrx); release(htx_INT);
-    htx.Gain = interp1(ant.az, ant.azdB, tgt_ang(1));
-    hrx.Gain = interp1(ant.az, ant.azdB, -tgt_ang(1));
-    htx_INT.Gain = interp1(ant.az, ant.azdB, int_ang(1));
+    htx.Gain = interp1(ant.az, ant.azdB, radtodeg(tgt_ang(1)));
+    hrx.Gain = interp1(ant.az, ant.azdB, radtodeg(-tgt_ang(1)));
+    htx_INT.Gain = interp1(ant.az, ant.azdB, radtodeg(int_ang(1)))/2;
     
-    % Move objects
-    [radar_pos(m,:),radar_vel(m,:)] = step(...
-        hradarplatform,hwav.SweepTime*hwav.NumSweeps);   % radar moves during sweep
-    [tgt_pos(m,:),tgt_vel(m,:)] = step(hcarplatform,... 
-        hwav.SweepTime*hwav.NumSweeps);                  % car moves during sweep
-    [itfer_pos(m,:), itfer_vel(m,:)] = step(hitferplatform,...
-        hwav.SweepTime*hwav.NumSweeps);                  % interferer moves during sweep
-  
     % Generate Our Signal
     signal.x = step(hwav);                      % generate the FMCW signal
     signal.xt = step(htx,signal.x);             % transmit the signal
        
     if ONE_WAY_CHANNEL
-        signal.xp = step(hchannel_oneway,signal.xt,radar_pos(m,:)',...
-             tgt_pos(m,:)',...
-             radar_vel(m,:)',...
-             tgt_vel(m,:)');                   % propagate through channel
+        signal.xp = step(hchannel_oneway,signal.xt,radarPos(m,:)',...
+             tgtPos(m,:)',...
+             radarVel(m,:)',...
+             tgtVel(m,:)');                   % propagate through channel
         signal.xrefl = step(hcar,signal.xp);                 % reflect the signal 
         signal.xtgt = step(hchannel_oneway,...
-            signal.xrefl,tgt_pos(m,:)',radar_pos(m,:)',...
-            tgt_vel(m,:)',radar_vel(m,:)');    % propagate through channel
+            signal.xrefl,tgtPos(m,:)',radarPos(m,:)',...
+            tgtVel(m,:)',radarVel(m,:)');    % propagate through channel
 
     else
         signal.xp = step(hchannel_twoway,...
             signal.xt,...
-            radar_pos(m,:)',....
-            tgt_pos(m,:)',...
-            radar_vel(m,:)',...
-            tgt_vel(m,:)');                     % Propagate signal
+            radarPos(m,:)',....
+            tgtPos(m,:)',...
+            radarVel(m,:)',...
+            tgtVel(m,:)');                     % Propagate signal
         signal.xtgt = step(hcar,signal.xp);        % Reflect the signal
     end
        
@@ -187,9 +182,7 @@ for m = 1:Nsweep
     % Beat signal without inteference
     signal.xrx = step(hrx,signal.xtgt); % receive the signal
     xd = downsample(dechirp(signal.xrx,signal.x),n); % dechirp the signal
-    
-    
-    
+        
     xr.NoINT(:,m) = xd;                             % buffer the dechirped signal
     beatsignal.NoINT((((tm/2)*fs_bs*2)*(m-1)+1):((tm/2)*fs_bs*2*m)) = xd;
        
@@ -198,28 +191,37 @@ for m = 1:Nsweep
         xitfer_gen = step(hwav_INT);                % Generate interfer signal
         xitfer_t = step(htx_INT, xitfer_gen);       % Transmit interfer signal
         signal.xitfer = step(hchannel_oneway, xitfer_t, ...
-            itfer_pos(m,:)', radar_pos(m,:)',...
-            itfer_vel(m,:)', radar_vel(m,:)');  % Propagate through channel       
+            itferPos(m,:)', radarPos(m,:)',...
+            itferVel(m,:)', radarVel(m,:)');  % Propagate through channel       
+%          signal.xitfer = circshift(signal.xitfer,[length(signal.xitfer)/4 length(signal.xitfer)/4]);
         signal.xrx = step(hrx,(signal.xtgt + signal.xitfer));  % receive the signal
         xd = downsample(dechirp(signal.xrx,signal.x),n); % dechirp the signal
-        
+                
         xr.INT(:,m) = xd;                             % buffer the dechirped signal
         beatsignal.INT((((tm/2)*fs_bs*2)*(m-1)+1):((tm/2)*fs_bs*2*m)) = xd;
-    end
         
- 
+        % Get just the interferer signal
+        signal.xrx = step(hrx,(signal.xitfer));  % receive the signal
+        xd = downsample(dechirp(signal.xrx,signal.x),n); % dechirp the signal
+                
+        xr.INTonly(:,m) = xd;                             % buffer the dechirped signal
+        beatsignal.INTonly((((tm/2)*fs_bs*2)*(m-1)+1):((tm/2)*fs_bs*2*m)) = xd;
+    end
     
+    % Get new angle
+%     [~, tgt_ang] = rangeangle(tgtPos(m,:)', radarPos(m,:))';
+%     [~, int_ang] = rangeangle(itferPos(m,:)', radarPos(m,:))';
    
-    
 end
 clear xd
 toc
 
-
+clear hcar hcarplatform hchannel_oneway hchannel_twoway hitfer
+clear hitferplatform hradarplatform hrx hspec htx htx_INT
+clear i int_ang int_rng xitfer_gen
 %% Plotting Spectral Density ----------------------------------------------
 if (PLOT.POWER)
     field = fieldnames(signal);
-    figure
     for n=1:length(field)
         figure
         x = signal.(field{n});
@@ -238,18 +240,11 @@ if (PLOT.POWER)
     
 end
 
-clear signal itfer_por itfer_speed 
-
 %% Plot Beat Signal TD and FD ---------------------------------------------
-plotBeatSignal(beatsignal.NoINT, fs_bs, 'Beat Signal without Interference')
+plotBeatSignal(beatsignal, fs_bs, MUTUAL_INTERFERENCE)
 
-if MUTUAL_INTERFERENCE
-    plotBeatSignal(beatsignal.INT, fs_bs, 'Beat Signal with Interference')
-end
-
-%clear bs_t beatsignal
 %% Plotting Vehicle Positions ---------------------------------------------
-plotVehiclePositions(radar_pos, tgt_pos, itfer_pos, ...
+plotVehiclePositions(radarPos, tgtPos, itferPos, ...
         PLOT.VEHICLES, MUTUAL_INTERFERENCE);
 
 
@@ -280,7 +275,7 @@ for i = 1:Nsweep
     rng_est_NoINT(i) = beat2range([fbu_rng_NoINT fbd_rng_NoINT],sweep_slope,c)/2;
     fd_NoINT = -(fbu_rng_NoINT+fbd_rng_NoINT)/2;
     v_est_NoINT(i) = dop2speed(fd_NoINT,lambda)/2;
-    rng_true_NoINT(i) = sqrt(sum((radar_pos(i,:)-tgt_pos(i,:)).^2));
+    rng_true_NoINT(i) = sqrt(sum((radarPos(i,:)-tgtPos(i,:)).^2));
 end
 
 if MUTUAL_INTERFERENCE
@@ -302,7 +297,7 @@ if MUTUAL_INTERFERENCE
 end
 
 clear fd_INT fbd_rng_INT fbu_rng_INT fbu_rng_NoINT fbd_rng_NoINT fd_NoINT
-clear xr_upsweep_NoINT xr_downsweep_NoINT xr_upsweep_INT xr_downsweep_NoINT
+clear xr_upsweep_NoINT xr_downsweep_NoINT xr_upsweep_INT xr_downsweep_INT
 %% Plot accuracy of calculations ------------------------------------------
 if (PLOT.ACCURACY)
     figure
@@ -337,4 +332,5 @@ if (PLOT.ACCURACY)
     
      
 end
+save(fileName)
 toc

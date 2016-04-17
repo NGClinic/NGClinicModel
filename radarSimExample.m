@@ -10,14 +10,14 @@ tic
 Nsweep = 8;
 % changing the bandwith does not change the power level/ SIR calculations
 tm = 10e-3;      
-radar_speed = 0;    %m/s
-radar_init_pos = [0;0;0.5]; %m
-car_speed = 30/((tm)*(Nsweep-1)); % m/s, 
-car_init_pos = [10;0;0.5];   %m
-itfer_speed = 0;
-itfer_init_pos = [10, 3.048, 0.5]'% Car lanes are about 10 ft --> 3.6576 m
-target = 'car'
-wave = 1
+radar_speed_x = 0;                    %m/s
+radar_init_pos = [0;0;0.5];           %m
+tgt_speed_x = 30/((tm)*(Nsweep-1));   %m/s, 
+tgt_init_pos = [10;0;0.5];            %m
+itfer_speed_x = 0;
+itfer_init_pos = [10, 3.048, 0.5]';% Car lanes are about 10 ft --> 3.6576 m
+target = 'car';
+wave = 1;
 
 % dur = (tm)*(Nsweep-1);
 % System waveform parameters ---------------------------------------------
@@ -52,26 +52,44 @@ rxLossFactor = 0;                             % in dB **TODO
 toc
 
 % Turn on and off sections of code ---------------------------------------
-PLOT.VEHICLES = 0;
+PLOT.VEHICLES = 1;
 PLOT.POWER = 0;
-PLOT.ACCURACY = 0;
+PLOT.ACCURACY = 1;
+PLOT.PREVIEW
 PLOT.BEATSIGNAL = 0;
 PLOT.CHIRP = 0;
-MUTUAL_INTERFERENCE= 1;
 ONE_WAY_CHANNEL = 0;
 SAVE = 0;
 PHASE_SHIFT = 0;
+TARGET = 1;
+MUTUAL_INTERFERENCE = 1;
+SCEN_TYPE = '1'; %1,2,3,4,'custom'
 fileName = 'filename.mat';
+
+
+%% Preview vehicle positions
+% get the duration of the simulation
+[radarPos, tgtPos, itferPos,...
+    radarVel, tgtVel, itferVel] = prevEnv(Nsweep, tm,...
+    radar_init_pos, tgt_init_pos, itfer_init_pos,...
+    radar_speed_x, tgt_speed_x, itfer_speed_x, PLOT.PREVIEW, MUTUAL_INTERFERENCE);
 
 %% Run the function
 [~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw, bw_INT, Nsweep, LPmixer,...
-    rad_pat, radar_speed, radar_init_pos, car_speed, car_init_pos,...
-    itfer_speed, itfer_init_pos, txPower, txLossFactor,rxNF,...
+    rad_pat, radarPos, itferPos, tgtPos, radarVel, itferVel, tgtVel,...
+    txPower, txLossFactor,rxNF,...
     rxLossFactor,...
     PLOT, MUTUAL_INTERFERENCE, ...
     PHASE_SHIFT, SAVE, fileName, target);
 
+% [~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw, bw_INT, Nsweep, LPmixer,...
+%     rad_pat, radar_speed_x, radar_init_pos, tgt_speed_x, tgt_init_pos,...
+%     itfer_speed_x, itfer_init_pos, txPower, txLossFactor,rxNF,...
+%     rxLossFactor,...
+%     PLOT, MUTUAL_INTERFERENCE, ...
+%     PHASE_SHIFT, SAVE, fileName, target);
+
 %%
-%  plotBeatSignal(beatsignal, fs_bs,1, 1)
+plotBeatSignal(beatsignal, fs_bs,PLOT.BEATSIGNAL, MUTUAL_INTERFERENCE)
 % load('scen23_wave1_10m.mat', 'beatsignal', 'fs_bs')
 [output] = calcSimSIR(beatsignal, fs_bs)

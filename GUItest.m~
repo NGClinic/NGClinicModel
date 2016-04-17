@@ -195,11 +195,9 @@ lbTargRan = uicontrol(f,'Style','text',...
 
 % Editable Items
 tbxLoc = uicontrol(f,'Style','edit','FontSize',12,...
-                'String','10',...
                 'Position',[550 362 40 20]);
             
 tbyLoc = uicontrol(f,'Style','edit','FontSize',12,...
-                'String','0',...
                 'Position',[550 337 40 20]);            
             
 tbcar_speed = uicontrol(f,'Style','edit','FontSize',12,...
@@ -239,7 +237,6 @@ lbScen = uicontrol(f,'Style','text',...
 
 % Editable Items
 tbNumSw = uicontrol(f,'Style','edit','FontSize',12,...
-                'String','8',...
                 'Position',[550 180 40 20]); 
             
 popScen = uicontrol(f,'Style','pop',...
@@ -283,7 +280,7 @@ pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
        % Target Parameters
        xLoc = str2double(get(tbxLoc,'string'));
        yLoc = str2double(get(tbyLoc,'string'));
-       car_init_pos = [xLoc;yLoc;0.5];
+       car_init_pos = [xLoc yLoc];
        car_speed = str2double(get(tbcar_speed,'string'));
        targRange = str2double(get(tbTargRan,'string'));
               
@@ -294,11 +291,11 @@ pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
        error = 0;
        % VERIFY ALL INPUTS ARE VALID
        % General Radar Parameters
-       if isnan(fc)||fc<2e9||fc>3e9
+       if isnan(fc)||fc<2||fc>3
            error = 1;
        end
        
-       if isnan(bw)||bw<1e6||bw>1000e6
+       if isnan(bw)||bw<1||bw>1000
            error = 1;
        end
        
@@ -306,7 +303,7 @@ pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
            error = 1;
        end
        
-       if isnan(bw_INT)||bw_INT<1e6||bw_INT>1000e6
+       if isnan(bw_INT)||bw_INT<1||bw_INT>1000
            error = 1;
        end
        
@@ -336,13 +333,13 @@ pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
            error = 1;
        end
        
-%        if isnan(car_speed)||car_speed<0||car_speed>100
-%            error = 1;
-%        end
+       if isnan(car_speed)||car_speed<0||car_speed>100
+           error = 1;
+       end
        
-%        if isnan(targRange)||targRange<1||targRange>100
-%            error = 1;
-%        end
+       if isnan(targRange)||targRange<1||targRange>100
+           error = 1;
+       end
        
        % Simulation Settings
        if isnan(Nsweep)||Nsweep<8||Nsweep>32
@@ -356,7 +353,7 @@ pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
        end
        
        display(scenType)
-        
+       
        if scenType == 1
             display('1 Selected');
        elseif scenType == 2

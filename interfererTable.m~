@@ -12,12 +12,12 @@ function interfererTable(numInt)
     rowName = 1:numInt;
     tableDat = zeros(numInt,cols);
     tableDat(1,1) = 10;
-    tableDat(1,2) = 3.048;
+    tableDat
     t = uitable('Parent',f,...
                 'ColumnName',{'xLoc','yLoc','Velocity'},'RowName',rowName,...
-                'Data',tableDat,'FontSize',12,...
-                'ColumnEditable', true);
-%                 'CellEditCallback',@converttonum);  
+                'Data',zeros(numInt,cols),'FontSize',12,...
+                'ColumnEditable', true,...
+                'CellEditCallback',@converttonum);  
     pbSim = uicontrol(f,'Style','pushbutton','String','Simulate',...
                     'FontSize',12,'Position',[300 20 75 30],...
                     'Callback',@pbSim_Callback);
@@ -35,7 +35,7 @@ function interfererTable(numInt)
     
     radar_init_pos = [0;0;0.5];
     rangeMax = 80;
-    PLOT.VEHICLES = 1;
+    PLOT.VEHICLES = 0;
     PLOT.POWER = 0;
     PLOT.ACCURACY = 0;
     PLOT.BEATSIGNAL = 0;
@@ -59,25 +59,25 @@ function interfererTable(numInt)
         if isnan(data(r,c))
             data(r,c) = 0;
             set(t,'Data',data)
-        end       
+        end
+        itfer_speed = data(1,3);
+        itfer_init_pos = [data(1,1);data(1,2);0.5];
     end
 
     function pbSim_Callback(source,callbackdata)
-        data = get(t,'Data');
-        itfer_speed = data(1,3);
-        itfer_init_pos = [data(1,1);data(1,2);0.5];
         display('Running Simulation')
         display('------------------')
         load('SampleRadiationPatterns.mat', 'TPLink');
-        rad_pat = TPLink; clear TPLink;
-        close(gcf)
         [~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw, bw_INT, Nsweep, LPmixer,...
             rad_pat, radar_speed, radar_init_pos, car_speed, car_init_pos,...
             itfer_speed, itfer_init_pos, txPower, txLossFactor,rxNF,...
             rxLossFactor,...
             PLOT, MUTUAL_INTERFERENCE, ...
             PHASE_SHIFT, SAVE, fileName, target);
-        [output] = calcSimSIR(beatsignal, fs_bs)
+%         display(car_speed)
+%         display(targRange)
+%         display(data)
+        close(gcf)
     end
 
     function pbCancel_Callback(source,callbackdata)

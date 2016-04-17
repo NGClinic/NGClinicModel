@@ -1,6 +1,6 @@
-function beatSignalPower = plotBeatSignal( beatSignal, fs, MUTUAL_INTERFERENCE)
-% plot beat signal
-    figure(1)
+function beatSignalPower = plotBeatSignal( beatSignal, fs, PLOT, MUTUAL_INTERFERENCE)
+if PLOT% plot beat signal
+    figure
     subplot(211)
     bs_t = (0:(1/fs):(((length(beatSignal.NoINT))/fs) - (1/fs)))*1000;
     plot(bs_t, abs(beatSignal.NoINT))
@@ -21,7 +21,7 @@ function beatSignalPower = plotBeatSignal( beatSignal, fs, MUTUAL_INTERFERENCE)
     xlim([-4000 4000])
     
     if MUTUAL_INTERFERENCE
-        figure(2)
+        figure
         subplot(211)
         bs_t = (0:(1/fs):(((length(beatSignal.INT))/fs) - (1/fs)))*1000;
         plot(bs_t, abs(beatSignal.INT))
@@ -40,7 +40,7 @@ function beatSignalPower = plotBeatSignal( beatSignal, fs, MUTUAL_INTERFERENCE)
         ylabel('|fft|')
         xlim([-4000 4000])
         
-        figure(3)
+        figure
         subplot(211)
         bs_t = (0:(1/fs):(((length(beatSignal.INTonly))/fs) - (1/fs)))*1000;
         plot(bs_t, abs(beatSignal.INTonly))
@@ -60,7 +60,7 @@ function beatSignalPower = plotBeatSignal( beatSignal, fs, MUTUAL_INTERFERENCE)
         xlim([-4000 4000])
         
         
-        figure(4)
+        figure
         subplot(211)
         bs_t = (0:(1/fs):(((length(beatSignal.NoINT))/fs) - (1/fs)))*1000;
         plot(bs_t, abs(beatSignal.NoINT),'g',...
@@ -86,6 +86,6 @@ function beatSignalPower = plotBeatSignal( beatSignal, fs, MUTUAL_INTERFERENCE)
         xlim([-4000 4000])
     end
     
-
+end
 end
 

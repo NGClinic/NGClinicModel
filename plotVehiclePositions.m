@@ -1,5 +1,5 @@
 function plotVehiclePositions( radar_pos, tgt_pos, itfer_pos,...
-    MUTUAL_INTERFERENCE, PLOT)
+     PLOT, MUTUAL_INTERFERENCE)
 % plot vehicle positions
 if PLOT
     figure

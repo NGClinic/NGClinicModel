@@ -1,4 +1,4 @@
-%% Plotting Spectral Density
+% Plotting Spectral Density
 if (PLOT.POWER)
     field = fieldnames(signal);
     figure

@@ -43,6 +43,8 @@ tempLen = length(step(hwav));
 n = tempLen/round(tempLen/(fs/LPmixer));
 fs_bs = fs/n;
 
+
+%% >>>> Change this so it iterates and creates multiple for each set of parameters
 hwav_INT = phased.FMCWWaveform('SweepTime',tm_INT/2,'SweepBandwidth',bw_INT,...
     'SampleRate',fs, 'SweepDirection', 'Triangle', 'NumSweeps',2*(tm/tm_INT)); %full triangle
 
@@ -154,18 +156,22 @@ for m = 1:Nsweep
         tgtVel(m,:)');                     % Propagate signal
     signal.xtgt = step(hcar,signal.xp);        % Reflect the signal
 
-    % Interfering Signal
     % Beat signal without inteference
     signal.xrx = step(hrx,signal.xtgt); % receive the signal
     xd = downsample(dechirp(signal.xrx,signal.x),n); % dechirp the signal
         
     xr.NoINT(:,m) = xd;                             % buffer the dechirped signal
     beatsignal.NoINT((((tm/2)*fs_bs*2)*(m-1)+1):((tm/2)*fs_bs*2*m)) = xd;
-       
+      
+    
+    %%>>>>> CHANGE THIS 
     if MUTUAL_INTERFERENCE
         % Beat signal with interference
+        %%>>>> Create each new interfering wave
         xitfer_gen = step(hwav_INT);                % Generate interfer signal
+        %%%>>>> step through each on
         xitfer_t = step(htx_INT, xitfer_gen);       % Transmit interfer signal
+        %%%>>>>>
         signal.xitfer = step(hchannel_oneway, xitfer_t, ...
             itferPos(m,:)', radarPos(m,:)',...
             itferVel(m,:)', radarVel(m,:)');  % Propagate through channel       
@@ -173,13 +179,16 @@ for m = 1:Nsweep
         if PHASE_SHIFT
             signal.xitfer = circshift(signal.xitfer,[length(signal.xitfer)/2 length(signal.xitfer)/2]);
         end
+        %%%>>>>>>>>>>>>>> Receving interferer signal 'sum(interferers)'
         signal.xrx = step(hrx,(signal.xtgt + signal.xitfer));  % receive the signal
         xd = downsample(dechirp(signal.xrx,signal.x),n); % dechirp the signal
-                
+        
+        
         xr.INT(:,m) = xd;                             % buffer the dechirped signal
         beatsignal.INT((((tm/2)*fs_bs*2)*(m-1)+1):((tm/2)*fs_bs*2*m)) = xd;
         
-        % Get just the interferer signal
+        % Isolate just the chirp
+        % >>>>>>> update this
         signal.xrx = step(hrx,(signal.xitfer));  % receive the signal
         xd = downsample(dechirp(signal.xrx,signal.x),n); % dechirp the signal
                 

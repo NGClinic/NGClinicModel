@@ -1,7 +1,7 @@
 function [output, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw,...
     bw_INT, Nsweep, LPmixer,...
-    rad_pat, radar_speed, radar_init_pos, car_speed, car_init_pos,...
-    itfer_speed, itfer_init_pos, txPower, txLossFactor,rxNF,...
+    rad_pat, radarPos, itferPos, tgtPos, radarVel, itferVel, tgtVel,...
+    txPower, txLossFactor,rxNF,...
     rxLossFactor,...
     PLOT, MUTUAL_INTERFERENCE, ...
     PHASE_SHIFT, SAVE, fileName, target)
@@ -23,8 +23,8 @@ fs = max(2*fb_max,bw);
 
 clear range_max rangeRes fr_max v_max fd_max fb_max TPLink
 %% Vehicle placement ------------------------------------------------------
-[tgt_rng, ~] = rangeangle(car_init_pos, radar_init_pos);
-[int_rng, ~] = rangeangle(itfer_init_pos, radar_init_pos);
+[tgt_rng, ~] = rangeangle(tgtPos(1,:)', radarPos(1,:)');
+[int_rng, ~] = rangeangle(itferPos(1,:)', radarPos(1,:)');
 
 %% FMCW Generation --------------------------------------------------------
 hwav = phased.FMCWWaveform('SweepTime',tm/2,'SweepBandwidth',bw,...
@@ -49,8 +49,8 @@ hwav_INT = phased.FMCWWaveform('SweepTime',tm_INT/2,'SweepBandwidth',bw_INT,...
     'SampleRate',fs, 'SweepDirection', 'Triangle', 'NumSweeps',2*(tm/tm_INT)); %full triangle
 
 %% Radar Parameters -------------------------------------------------------
-hradarplatform = phased.Platform('InitialPosition',radar_init_pos,...
-    'Velocity',[radar_speed;0;0]);
+hradarplatform = phased.Platform('InitialPosition',radarPos(1,:)',...
+    'Velocity',radarVel(1,:)');
 
 %% Target Model Parameters ------------------------------------------------
 % Radar cross section for a human
@@ -68,16 +68,16 @@ end
 hcar = phased.RadarTarget('MeanRCS',rcs,'PropagationSpeed',c,...
     'OperatingFrequency',fc);
 hcarplatform = phased.Platform('InitialPosition',...
-    car_init_pos,...
-    'Velocity',[car_speed;0;0]);
+    tgtPos(1,:)',...
+    'Velocity',tgtVel(1,:)');
 
 %% Interference Model -----------------------------------------------------
 itfer_rcs = db2pow(min(10*log10(int_rng)+5,20));
 hitfer = phased.RadarTarget('MeanRCS',itfer_rcs,'PropagationSpeed',c,...
     'OperatingFrequency',fc);
 hitferplatform = phased.Platform('InitialPosition',...
-    itfer_init_pos,...
-    'Velocity',[itfer_speed;0;0]);
+    itferPos(1,:)',...
+    'Velocity',itferVel(1,:)');
 
 
 %% Free Space Channel Set Up ----------------------------------------------
@@ -111,12 +111,12 @@ clear rxLossFactor rxGain rxNF rxLossFactor
 %% Simulation Loop Memory Allocation---------------------------------------
 
 %Initializing zero-vectors
-radarPos = zeros(Nsweep,3);
-radarVel = zeros(Nsweep,3);
-tgtPos = zeros(Nsweep,3);
-tgtVel = zeros(Nsweep, 3);
-itferPos = zeros(Nsweep, 3);
-itferVel = zeros(Nsweep,3);
+% radarPos = zeros(Nsweep,3);
+% radarVel = zeros(Nsweep,3);
+% tgtPos = zeros(Nsweep,3);
+% tgtVel = zeros(Nsweep, 3);
+% itferPos = zeros(Nsweep, 3);
+% itferVel = zeros(Nsweep,3);
 xr.NoINT = zeros(length(step(hwav))/n, Nsweep);
 xr.INT = zeros(length(step(hwav))/n, Nsweep);
 beatsignal.NoINT = zeros((tm/2)*fs_bs*2*Nsweep, 1);
@@ -127,12 +127,12 @@ toc
 %% Simulation Loop --------------------------------------------------------
 for m = 1:Nsweep   
     % Move objects
-    [radarPos(m,:),radarVel(m,:)] = step(...
-        hradarplatform,hwav.SweepTime*hwav.NumSweeps);   % radar moves during sweep
-    [tgtPos(m,:),tgtVel(m,:)] = step(hcarplatform,... 
-        hwav.SweepTime*hwav.NumSweeps);                  % car moves during sweep
-    [itferPos(m,:), itferVel(m,:)] = step(hitferplatform,...
-        hwav.SweepTime*hwav.NumSweeps);                  % interferer moves during sweep
+%     [radarPos(m,:),radarVel(m,:)] = step(...
+%         hradarplatform,hwav.SweepTime*hwav.NumSweeps);   % radar moves during sweep
+%     [tgtPos(m,:),tgtVel(m,:)] = step(hcarplatform,... 
+%         hwav.SweepTime*hwav.NumSweeps);                  % car moves during sweep
+%     [itferPos(m,:), itferVel(m,:)] = step(hitferplatform,...
+%         hwav.SweepTime*hwav.NumSweeps);                  % interferer moves during sweep
   
     % Calculate angle
     tgt_ang = atan2(tgtPos(m,2) - radarPos(m,2), tgtPos(m,1) - radarPos(m,1));
@@ -287,7 +287,7 @@ if (PLOT.ACCURACY)
     grid on
     hold on
     suptitle(['Accuracy with ' num2str(Nsweep) ' Sweeps'])
-    t = (0:Nsweep-1)*hwav.SweepTime*hwav.NumSweeps;
+    t = (0:Nsweep-1)*hwav.SweepTime;
     plot(t, rng_true_NoINT, '.-', 'DisplayName', 'Target Range (m)')
     plot(t, rng_est_NoINT,'.-', 'DisplayName', 'Calc w/o Int (m)'); 
     if MUTUAL_INTERFERENCE
@@ -295,13 +295,13 @@ if (PLOT.ACCURACY)
     end
     legend('Location', 'eastoutside'); 
     hold off
-    xlim([0, Nsweep*hwav.SweepTime*hwav.NumSweeps])
+    xlim([0, t(end)])
     title('Range'); ylabel('m'); xlabel('s');
    
     subplot(212);
     grid on
     hold on
-    plot(t, -(radar_speed-car_speed)*ones(Nsweep,1), ...
+    plot(t, -(radarVel(1,1)-tgtVel(1,1))*ones(Nsweep,1), ...
         '.-', 'DisplayName', 'Target Speed (m/s)')
     plot(t, -v_est_NoINT, '.-', 'DisplayName', 'Calc w/o Int (m/s)');
     if MUTUAL_INTERFERENCE
@@ -309,7 +309,7 @@ if (PLOT.ACCURACY)
     end
     hold off
     legend('Location', 'eastoutside'); 
-    xlim([0, Nsweep*hwav.SweepTime*hwav.NumSweeps])
+    xlim([0, t(end)])
     title('Velocity'); ylabel('m/s');  xlabel('s');
     
      

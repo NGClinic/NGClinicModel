@@ -52,11 +52,13 @@ if PLOT
     plot(radarPos(:,1),radarPos(:,2), 'g-', 'DisplayName','Our Radar');
     plot(radarPos(1,1),radarPos(1,2), 'go', 'DisplayName', 'Start');
     plot(radarPos(end,1),radarPos(end,2), 'gx', 'DisplayName', 'End');
+    legend('Location', 'eastoutside')
     
     if TARGET
         plot(tgtPos(:,1), tgtPos(:,2), 'k-', 'DisplayName', 'Target System');
         plot(tgtPos(1,1), tgtPos(1,2), 'ko', 'DisplayName', 'Start');
         plot(tgtPos(end,1), tgtPos(end,2), 'kx', 'DisplayName', 'End');
+        legend('Location', 'eastoutside')
     end
     
     

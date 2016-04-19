@@ -46,22 +46,13 @@ fs_bs = fs/n;
 
 %% >>>> Change this so it iterates and creates multiple for each set of parameters
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEW CODE
-num = length(inputArray(:,1));
-hwavArray = cell(num,1);
-for i=1:num
+for i = 1:num
+    tm = inputArray(i,2);
+    fs = inputArray(i,3);
+    bw = inputArray(i,4);
     hwavArray{i} = phased.FMCWWaveform('SweepTime',tm/2,'SweepBandwidth',bw,...
     'SampleRate',fs, 'SweepDirection', 'Triangle', 'NumSweeps', 2);
-        for j=1:num
-            tm{j} = inputArray(:,2);
-                for k=1:num
-                    bw{k} = inputArray(:,3);
-                        for m=1:num
-                            fs{m} = inputArray(:,4);
-                        end
-                end
-        end
 end
-
 for n=1:num
     n
     hwavArray{n}

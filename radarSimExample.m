@@ -63,9 +63,8 @@ PLOT.CHIRP = 0;
 ONE_WAY_CHANNEL = 0;
 SAVE = 0;
 PHASE_SHIFT = 0;
-TARGET = 1;
-MUTUAL_INTERFERENCE = 1;
-TARGET = 1;
+MUTUAL_INTERFERENCE = 0;
+TARGET = 0;
 SCEN_TYPE = '1'; %1,2,3,4,'custom'
 fileName = 'filename.mat';
 

@@ -14,8 +14,10 @@ radar_speed_x = 0;                    %m/s
 radar_init_pos = [0;0;0.5];           %m
 tgt_speed_x = 30/((tm)*(Nsweep-1));   %m/s, 
 tgt_init_pos = [10;0;0.5];            %m
-itfer_speed_x = 0;
-itfer_init_pos = [10, 3.048, 0.5]';% Car lanes are about 10 ft --> 3.6576 m
+% itfer_speed_x = 0;
+% itfer_init_pos = [10, 3.048, 0.5]';% Car lanes are about 10 ft --> 3.6576 m
+itferData = [10, 3.048, 0;
+             15, -3.048,0];
 target = 'car';
 wave = 1;
 
@@ -55,7 +57,7 @@ toc
 PLOT.VEHICLES = 1;
 PLOT.POWER = 0;
 PLOT.ACCURACY = 1;
-PLOT.PREVIEW = 0;
+PLOT.PREVIEW = 1;
 PLOT.BEATSIGNAL = 0;
 PLOT.CHIRP = 0;
 ONE_WAY_CHANNEL = 0;
@@ -72,8 +74,8 @@ fileName = 'filename.mat';
 % get the duration of the simulation
 [radarPos, tgtPos, itferPos,...
     radarVel, tgtVel, itferVel] = prevEnv(Nsweep, tm,...
-    radar_init_pos, tgt_init_pos, itfer_init_pos,...
-    radar_speed_x, tgt_speed_x, itfer_speed_x, PLOT.PREVIEW, MUTUAL_INTERFERENCE, TARGET);
+    radar_init_pos, tgt_init_pos, itferData,...
+    radar_speed_x, tgt_speed_x, PLOT.PREVIEW, MUTUAL_INTERFERENCE, TARGET);
 
 %% Run the function
 [~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw, bw_INT, Nsweep, LPmixer,...

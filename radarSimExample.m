@@ -55,7 +55,7 @@ toc
 PLOT.VEHICLES = 1;
 PLOT.POWER = 0;
 PLOT.ACCURACY = 1;
-PLOT.PREVIEW
+PLOT.PREVIEW = 0;
 PLOT.BEATSIGNAL = 0;
 PLOT.CHIRP = 0;
 ONE_WAY_CHANNEL = 0;
@@ -63,6 +63,7 @@ SAVE = 0;
 PHASE_SHIFT = 0;
 TARGET = 1;
 MUTUAL_INTERFERENCE = 1;
+TARGET = 1;
 SCEN_TYPE = '1'; %1,2,3,4,'custom'
 fileName = 'filename.mat';
 
@@ -72,14 +73,14 @@ fileName = 'filename.mat';
 [radarPos, tgtPos, itferPos,...
     radarVel, tgtVel, itferVel] = prevEnv(Nsweep, tm,...
     radar_init_pos, tgt_init_pos, itfer_init_pos,...
-    radar_speed_x, tgt_speed_x, itfer_speed_x, PLOT.PREVIEW, MUTUAL_INTERFERENCE);
+    radar_speed_x, tgt_speed_x, itfer_speed_x, PLOT.PREVIEW, MUTUAL_INTERFERENCE, TARGET);
 
 %% Run the function
 [~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw, bw_INT, Nsweep, LPmixer,...
     rad_pat, radarPos, itferPos, tgtPos, radarVel, itferVel, tgtVel,...
     txPower, txLossFactor,rxNF,...
     rxLossFactor,...
-    PLOT, MUTUAL_INTERFERENCE, ...
+    PLOT, MUTUAL_INTERFERENCE, TARGET, ...
     PHASE_SHIFT, SAVE, fileName, target);
 
 % [~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw, bw_INT, Nsweep, LPmixer,...

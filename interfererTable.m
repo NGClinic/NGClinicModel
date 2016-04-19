@@ -33,14 +33,16 @@ function interfererTable(numInt)
     set(t,'Position',[20 20 round(tExtent(3)) round(tExtent(4))]);
     set(f,'position',[400 400 400 figHeight+40]); 
     
-    radar_init_pos = [0;0;0.5];
+%     radar_init_pos = [0;0;0.5];
     rangeMax = 80;
     PLOT.VEHICLES = 1;
     PLOT.POWER = 0;
     PLOT.ACCURACY = 0;
     PLOT.BEATSIGNAL = 0;
+    PLOT.PREVIEW = 0;
     PLOT.CHIRP = 0;
     MUTUAL_INTERFERENCE= 1;
+    TARGET = 1;
     SAVE = 0;
     PHASE_SHIFT = 0;
     fileName = 'filename.mat';
@@ -65,17 +67,24 @@ function interfererTable(numInt)
     function pbSim_Callback(source,callbackdata)
         data = get(t,'Data');
         itfer_speed = data(1,3);
-        itfer_init_pos = [data(1,1);data(1,2);0.5];
+        itfer_init_pos = [data(1,1) data(1,2) 0.5];
         display('Running Simulation')
         display('------------------')
         load('SampleRadiationPatterns.mat', 'TPLink');
         rad_pat = TPLink; clear TPLink;
         close(gcf)
-        [~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw, bw_INT, Nsweep, LPmixer,...
-            rad_pat, radar_speed, radar_init_pos, car_speed, car_init_pos,...
-            itfer_speed, itfer_init_pos, txPower, txLossFactor,rxNF,...
-            rxLossFactor,...
-            PLOT, MUTUAL_INTERFERENCE, ...
+        
+        [radarPos, tgtPos, itferPos,...
+        radarVel, tgtVel, itferVel] = prevEnv( Nsweep, tm,...
+            radar_init_pos, car_init_pos, itfer_init_pos,...
+            radar_speed, car_speed, itfer_speed, PLOT.PREVIEW,...
+            MUTUAL_INTERFERENCE, TARGET);
+        
+        [~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw,...
+            bw_INT, Nsweep, LPmixer, rad_pat, radarPos,...
+            itferPos, tgtPos, radarVel, itferVel,...
+            tgtVel, txPower, txLossFactor,rxNF, rxLossFactor,...
+            PLOT, MUTUAL_INTERFERENCE,TARGET, ...
             PHASE_SHIFT, SAVE, fileName, target);
         [output] = calcSimSIR(beatsignal, fs_bs)
     end

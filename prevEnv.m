@@ -1,7 +1,7 @@
 function [radarPos, tgtPos, itferPos,...
     radarVel, tgtVel, itferVel] = prevEnv( Nsweep, tm,...
     radar_init_pos, tgt_init_pos, itfer_init_pos,...
-    radar_speed_x, tgt_speed_x, itfer_speed_x, PLOT, MUTUAL_INTERFERENCE)
+    radar_speed_x, tgt_speed_x, itfer_speed_x, PLOT, MUTUAL_INTERFERENCE, TARGET)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -28,7 +28,7 @@ tgtVel = [tgt_speed_x*ones(1,len)
 itferVel = [itfer_speed_x*ones(1,len)
             zeros(1,len); zeros(1,len)]';
 plotVehiclePositions( radarPos, tgtPos, itferPos,...
-     PLOT, MUTUAL_INTERFERENCE)
+     PLOT, MUTUAL_INTERFERENCE,TARGET)
  
 end
 

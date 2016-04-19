@@ -1,9 +1,10 @@
 function GUItest
 close all
 clear all
-global fc tm bw radar_speed bw_INT tm_INT
+global fc tm bw bw_INT tm_INT
 global txPower txLossFactor rxNF rxLossFactor rad_pat
-global car_init_pos car_speed targRange
+global radar_init_pos car_init_pos itfer_init_pos
+global radar_speed car_speed itfer_speed
 global Nsweep scenType
 
 f = figure('OuterPosition',[200 200 700 650]);
@@ -17,6 +18,9 @@ leftTit1 = 400;
 botTit1 = 200;
 
 botTit2 = botTit+100;
+botTit3 = botTit-50;
+botTit4 = botTit3-150;
+botTit5 = botTit-20;
 % leftTB1 = 
 
 %% Simulation Settings
@@ -62,62 +66,62 @@ tbTitle2 = uicontrol(f,'Style','text',...
                 'String','General Radar Parameters',...
                 'HorizontalAlignment','left',...
                 'FontSize',16,...
-                'Position',[leftTit botTit 200 30]);
+                'Position',[leftTit botTit5 200 30]);
             
 lbfc = uicontrol(f,'Style','text',...
                 'String','Center Frequency (2-3 GHz)',...
                 'HorizontalAlignment','left',...
                 'FontSize',12,...
-                'Position',[leftTit+20 botTit-25 200 30]);
+                'Position',[leftTit+20 botTit5-25 200 30]);
             
 lbtm = uicontrol(f,'Style','text',...
                 'String','Chirp Period (ms)',...
                 'HorizontalAlignment','left',...
                 'FontSize',12,...
-                'Position',[leftTit+20 botTit-50 200 30]);
+                'Position',[leftTit+20 botTit5-50 200 30]);
 
 lbbw = uicontrol(f,'Style','text',...
                 'String','Bandwidth (1-1000 MHz)',...
                 'HorizontalAlignment','left',...
                 'FontSize',12,...
-                'Position',[leftTit+20 botTit-75 200 30]);
+                'Position',[leftTit+20 botTit5-75 200 30]);
             
 lbIbw = uicontrol(f,'Style','text',...
                 'String','Interferer Bandwidth (1-1000 MHz)',...
                 'HorizontalAlignment','left',...
                 'FontSize',12,...
-                'Position',[leftTit+20 botTit-100 200 30]);
+                'Position',[leftTit+20 botTit5-100 200 30]);
             
 lbItm = uicontrol(f,'Style','text',...
                 'String','Interferer Chirp Period (ms)',...
                 'HorizontalAlignment','left',...
                 'FontSize',12,...
-                'Position',[leftTit+20 botTit-125 200 30]);
+                'Position',[leftTit+20 botTit5-125 200 30]);
 
 % Editable items
 tbfc = uicontrol(f,'Style','edit','FontSize',12,...
                 'String','2.445','Enable','off',...
-                'Position',[leftTB 387 40 20]);
+                'Position',[leftTB botTit5-13 40 20]);
             
 poptm = uicontrol(f,'Style','pop',...
                 'FontSize',12,'Enable','off',...
                 'String',{'20','40'},'Value',2,...
-                'Position',[leftTB-5 362 65 20]);   
+                'Position',[leftTB-5 botTit5-38 65 20]);   
 poptmList = get(poptm,'string');
             
 tbbw = uicontrol(f,'Style','edit','FontSize',12,...
                 'String','70','Enable','off',...
-                'Position',[leftTB 337 40 20]);  
+                'Position',[leftTB botTit5-63 40 20]);  
             
             
 tbIbw = uicontrol(f,'Style','edit','FontSize',12,...
                 'String','70','Enable','off',...
-                'Position',[leftTB 312 40 20]);            
+                'Position',[leftTB botTit5-88 40 20]);            
 
 popItm = uicontrol(f,'Style','pop',...
                 'FontSize',12,'Enable','off',...
                 'String',{'20','40'},'Value',2,...
-                'Position',[leftTB-5 287 65 20]);    
+                'Position',[leftTB-5 botTit5-113 65 20]);    
 popItmList = get(popItm,'string');         
                         
 %% Antenna Parameters
@@ -188,46 +192,44 @@ tbTitle4 = uicontrol(f,'Style','text',...
                 'String','Main System Parameters',...
                 'HorizontalAlignment','left',...
                 'FontSize',16,...
-                'Position',[leftTit1 botTit 200 30]);
-            
-align([tbTitle2,tbTitle4],'none','bottom')  
+                'Position',[leftTit1 botTit2 200 30]);
 
 lbinitPos_ms = uicontrol(f,'Style','text',...
                 'String','Initial Position',...
                 'HorizontalAlignment','left',...
                 'FontSize',12,...
-                'Position',[420 botTit-25 130 30]);
+                'Position',[420 botTit2-25 130 30]);
             
 lbxLoc_ms = uicontrol(f,'Style','text',...
                 'String','x-Location',...
                 'HorizontalAlignment','left',...
                 'FontSize',12,...
-                'Position',[435 botTit-50 130 30]);    
+                'Position',[435 botTit2-50 130 30]);    
             
 lbyLoc_ms = uicontrol(f,'Style','text',...
                 'String','y-Location',...
                 'HorizontalAlignment','left',...
                 'FontSize',12,...
-                'Position',[435 botTit-75 130 30]);               
+                'Position',[435 botTit2-75 130 30]);               
 
 lbms_speed = uicontrol(f,'Style','text',...
                 'String','Speed (0-100 m/s)',...
                 'HorizontalAlignment','left',...
                 'FontSize',12,...
-                'Position',[420 botTit-100 130 30]);
+                'Position',[420 botTit2-100 130 30]);
 
 % Editable Items
 tbxLoc_ms = uicontrol(f,'Style','edit','FontSize',12,...
                 'String','0','Enable','off',...
-                'Position',[550 botTit-38 40 20]);
+                'Position',[550 botTit2-38 40 20]);
             
 tbyLoc_ms = uicontrol(f,'Style','edit','FontSize',12,...
                 'String','0','Enable','off',...
-                'Position',[550 botTit-63 40 20]);            
+                'Position',[550 botTit2-63 40 20]);            
             
 tbms_speed = uicontrol(f,'Style','edit','FontSize',12,...
                 'String','0','Enable','off',...
-                'Position',[550 botTit-88 40 20]);       
+                'Position',[550 botTit2-88 40 20]);       
 
 %% Target Parameters
 % Title and labels
@@ -235,61 +237,136 @@ tbTitle5 = uicontrol(f,'Style','text',...
                 'String','Target Parameters',...
                 'HorizontalAlignment','left',...
                 'FontSize',16,...
-                'Position',[leftTit1 200 200 30]);
-      
-align([tbTitle3,tbTitle5],'none','top')
+                'Position',[leftTit1 botTit3 200 30]);
 
 lbinitPos = uicontrol(f,'Style','text',...
                 'String','Initial Position',...
                 'HorizontalAlignment','left',...
                 'FontSize',12,...
-                'Position',[420 botTit1-25 130 30]);
+                'Position',[420 botTit3-25 130 30]);
             
 lbxLoc = uicontrol(f,'Style','text',...
                 'String','x-Location',...
                 'HorizontalAlignment','left',...
                 'FontSize',12,...
-                'Position',[435 botTit1-50 130 30]);    
+                'Position',[435 botTit3-50 130 30]);    
             
 lbyLoc = uicontrol(f,'Style','text',...
                 'String','y-Location',...
                 'HorizontalAlignment','left',...
                 'FontSize',12,...
-                'Position',[435 botTit1-75 130 30]);               
+                'Position',[435 botTit3-75 130 30]);               
 
 lbcar_speed = uicontrol(f,'Style','text',...
                 'String','Speed (0-100 m/s)',...
                 'HorizontalAlignment','left',...
                 'FontSize',12,...
-                'Position',[420 botTit1-100 130 30]);
+                'Position',[420 botTit3-100 130 30]);
 
 % Editable Items
 tbxLoc = uicontrol(f,'Style','edit','FontSize',12,...
                 'String','10','Enable','off',...
-                'Position',[550 botTit1-38 40 20]);
+                'Position',[550 botTit3-38 40 20]);
             
 tbyLoc = uicontrol(f,'Style','edit','FontSize',12,...
                 'String','0','Enable','off',...
-                'Position',[550 botTit1-63 40 20]);            
+                'Position',[550 botTit3-63 40 20]);            
             
 tbcar_speed = uicontrol(f,'Style','edit','FontSize',12,...
                 'String','428.5714','Enable','off',...
-                'Position',[550 botTit1-88 40 20]);           
+                'Position',[550 botTit3-88 40 20]);           
 
-%% Buttons              
-pbNext = uicontrol(f,'Style','pushbutton','String','Next',...
+%% Inteferer Parameters
+% Title and labels
+tbTitle6 = uicontrol(f,'Style','text',...
+                'String','Intereferer Parameters',...
+                'HorizontalAlignment','left',...
+                'FontSize',16,...
+                'Position',[leftTit1 botTit4 200 30]);
+
+lbMultInt = uicontrol(f,'Style','text',...
+                'String','Multiple Interferers',...
+                'HorizontalAlignment','left',...
+                'FontSize',12,...
+                'Position',[420 botTit4-25 130 30]);          
+
+lbinitPos_I = uicontrol(f,'Style','text',...
+                'String','Initial Position',...
+                'HorizontalAlignment','left',...
+                'FontSize',12,...
+                'Position',[420 botTit4-50 130 30]);
+            
+lbxLoc_I = uicontrol(f,'Style','text',...
+                'String','x-Location',...
+                'HorizontalAlignment','left',...
+                'FontSize',12,...
+                'Position',[435 botTit4-75 130 30]);    
+            
+lbyLoc_I = uicontrol(f,'Style','text',...
+                'String','y-Location',...
+                'HorizontalAlignment','left',...
+                'FontSize',12,...
+                'Position',[435 botTit4-100 130 30]);               
+
+lbInt_speed = uicontrol(f,'Style','text',...
+                'String','Speed (0-100 m/s)',...
+                'HorizontalAlignment','left',...
+                'FontSize',12,...
+                'Position',[420 botTit4-125 130 30]);
+
+% Editable Items
+cbMultInt = uicontrol(f,'Style','checkbox',...
+                'Value',0,'Position',[530 botTit4-18 130 30],...
+                'Enable','off',...
+                'Callback',@multInt_Callback);
+            
+tbxLoc_I = uicontrol(f,'Style','edit','FontSize',12,...
+                'String','10','Enable','off',...
+                'Position',[550 botTit4-63 40 20]);
+            
+tbyLoc_I = uicontrol(f,'Style','edit','FontSize',12,...
+                'String','3.048','Enable','off',...
+                'Position',[550 botTit4-88 40 20]);            
+            
+tbInt_speed = uicontrol(f,'Style','edit','FontSize',12,...
+                'String','0','Enable','off',...
+                'Position',[550 botTit4-113 40 20]); 
+
+%% Buttons  
+pbSim = uicontrol(f,'Style','pushbutton','String','Simulate',...
                     'FontSize',12,'Position',[585 20 75 30],...
                     'Callback',@pbNext_Callback);
                 
-pbPreview = uicontrol(f,'Style','pushbutton','String','Preview',...
+pbNext = uicontrol(f,'Style','pushbutton','String','Next',...
                     'FontSize',12,'Position',[500 20 75 30],...
+                    'Enable','off',...
+                    'Callback',@pbNext_Callback);
+                
+pbPreview = uicontrol(f,'Style','pushbutton','String','Preview',...
+                    'FontSize',12,'Position',[415 20 75 30],...
                     'Callback',@pbPreview_Callback);                
                 
 pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
-                    'FontSize',12,'Position',[415 20 75 30],...
+                    'FontSize',12,'Position',[330 20 75 30],...
                     'Callback',@pbCancel_Callback);
               
 %% Callback Functions
+
+    function multInt_Callback(source,callbackdata)
+        if (get(cbMultInt,'Value') == get(cbMultInt,'Max'))
+            set(pbSim,'Enable','off')
+            set(pbNext,'Enable','on')
+            set(tbxLoc_I,'Enable','off')
+            set(tbyLoc_I,'Enable','off')
+            set(tbInt_speed,'Enable','off')
+        else
+            set(pbSim,'Enable','on')
+            set(pbNext,'Enable','off')
+            set(tbxLoc_I,'Enable','on')
+            set(tbyLoc_I,'Enable','on')
+            set(tbInt_speed,'Enable','on')
+        end
+    end
 
     function scen_Callback(source,callbackdata)
         scen = get(popScen,'Value');
@@ -310,6 +387,18 @@ pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
             set(poprpat,'Value',1,'Enable','off')
             set(poptm,'Value',2,'Enable','off')
             set(popItm,'Value',2,'Enable','off')
+            set(cbMultInt,'Value',0,'Enable','off')
+            set(pbSim,'Enable','on')
+            set(pbNext,'Enable','off')
+            if scen == 1 || scen == 4
+                set(tbxLoc_I,'Enable','off')
+                set(tbyLoc_I,'Enable','off')
+                set(tbInt_speed,'Enable','off')
+            else
+                set(tbxLoc_I,'Enable','on')
+                set(tbyLoc_I,'Enable','on')
+                set(tbInt_speed,'Enable','on')
+            end
         else
             set(tbfc,'Enable','on')
             set(tbbw,'Enable','on')
@@ -327,6 +416,10 @@ pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
             set(poprpat,'Enable','on')
             set(poptm,'Enable','on')
             set(popItm,'Enable','on')
+            set(cbMultInt,'Value',0,'Enable','on')
+            set(tbxLoc_I,'Enable','on')
+            set(tbyLoc_I,'Enable','on')
+            set(tbInt_speed,'Enable','on')
         end
      
     end
@@ -335,6 +428,25 @@ pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
        display('Next Pressed')
        
        % RECORD INPUTS
+       % Simulation Settings
+       Nsweep = str2double(get(tbNumSw,'string'));
+       scenType = get(popScen,'value');
+       rangeMax = 80;
+       MUTUAL_INTERFERENCE = 1;
+       TARGET = 1;
+       LPmixer = 28e3;
+       PHASE_SHIFT = 0;
+       target = 'car';
+       SAVE = 0;
+       fileName = 'filename.mat';
+       PLOT.VEHICLES = 1;
+       PLOT.POWER = 0;
+       PLOT.ACCURACY = 1;
+       PLOT.PREVIEW = 0;
+       PLOT.BEATSIGNAL = 0;
+       PLOT.CHIRP = 0;
+       target = 'car';
+       
        % General Radar Parameters
        fc = str2double(get(tbfc,'string'))*1e9;
        tmVal = get(poptm,'value');
@@ -349,7 +461,7 @@ pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
        txLossFactor = str2double(get(tbtxL,'string'));
        rxNF = str2double(get(tbrxN,'string'));
        rxLossFactor = str2double(get(tbrxL,'string'));
-       options = load('SampleRadiationPatterns.mat')
+       options = load('SampleRadiationPatterns.mat');
        rad_patVal = get(poprpat,'value');
        if rad_patVal == 1
            rad_pat = options.TPLink;
@@ -370,15 +482,16 @@ pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
        yLoc = str2double(get(tbyLoc,'string'));
        car_init_pos = [xLoc;yLoc;0.5];
        car_speed = str2double(get(tbcar_speed,'string'));
-       targRange = str2double(get(tbTargRan,'string'));
-              
-       % Simulation Settings
-       Nsweep = str2double(get(tbNumSw,'string'));
-       scenType = get(popScen,'value');
        
-       
-       error = 0;
+       % Interferer Parameters
+       multInt = get(cbMultInt,'Value');
+       xLoc_I = str2double(get(tbxLoc_I,'string'));
+       yLoc_I = str2double(get(tbyLoc_I,'string'));
+       itfer_init_pos = [xLoc_I;yLoc_I;0.5];
+       itfer_speed = str2double(get(tbInt_speed,'string'));
+             
        % VERIFY ALL INPUTS ARE VALID
+        error = 0;
        % General Radar Parameters
        if isnan(fc)||fc<2e9||fc>3e9
            error = 1;
@@ -442,25 +555,95 @@ pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
        end
        
        display(scenType)
-        
+       
        if scenType == 1
-            display('1 Selected');
-       elseif scenType == 2
-            display('2 Selected');
-       elseif scenType == 3
-            display('3 Selected');
-       elseif scenType == 4
-            display('4 Selected');
-       else
-            close(gcf)
-            display('Custom Selected');
-            numIntdlg
+           MUTUAL_INTERFERENCE = 0;
+       elseif scenType == 2 || scenType == 4
+           TARGET = 0;
        end
+        
+       if multInt == 0
+          [radarPos, tgtPos, itferPos,...
+            radarVel, tgtVel, itferVel] = prevEnv( Nsweep, tm,...
+            radar_init_pos, car_init_pos, itfer_init_pos,...
+            radar_speed, car_speed, itfer_speed, 0,...
+            MUTUAL_INTERFERENCE, 0);
+
+          [~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw,...
+            bw_INT, Nsweep, LPmixer, rad_pat, radarPos,...
+            itferPos, tgtPos, radarVel, itferVel,...
+            tgtVel, txPower, txLossFactor,rxNF, rxLossFactor,...
+            PLOT, MUTUAL_INTERFERENCE,TARGET, ...
+            PHASE_SHIFT, SAVE, fileName, target);
+        
+          [output] = calcSimSIR(beatsignal, fs_bs)
+       else
+          close(gcf)
+          numIntdlg
+       end
+%        if scenType == 1
+%             display('1 Selected');
+%        elseif scenType == 2
+%             display('2 Selected');
+%        elseif scenType == 3
+%             display('3 Selected');
+%        elseif scenType == 4
+%             display('4 Selected');
+%        else
+%             close(gcf)
+%             display('Custom Selected');
+%             numIntdlg
+%        end
        display('------------------');
                        
     end
 
     function pbPreview_Callback(source,callbackdata)
+       % Simulation Settings
+       scenType = get(popScen,'value');
+       Nsweep = str2double(get(tbNumSw,'string'));
+       
+       % General Radar Parameters
+       tmVal = get(poptm,'value');
+       tm = str2double(poptmList{tmVal})*1e-3;
+       
+       % Main System Parameters
+       xLoc_ms = str2double(get(tbxLoc_ms,'string'));
+       yLoc_ms = str2double(get(tbyLoc_ms,'string'));
+       radar_init_pos = [xLoc_ms;yLoc_ms;0.5];
+       radar_speed = str2double(get(tbms_speed,'string'));
+       
+       % Target Parameters
+       xLoc = str2double(get(tbxLoc,'string'));
+       yLoc = str2double(get(tbyLoc,'string'));
+       car_init_pos = [xLoc;yLoc;0.5];
+       car_speed = str2double(get(tbcar_speed,'string'));
+       
+       % Interferer Parameters
+       xLoc_I = str2double(get(tbxLoc_I,'string'));
+       yLoc_I = str2double(get(tbyLoc_I,'string'));
+       itfer_init_pos = [xLoc_I;yLoc_I;0.5];
+       itfer_speed = str2double(get(tbInt_speed,'string'));
+       
+       % Scene Specific Settings
+       MUTUAL_INTERFERENCE = 1;
+       if scenType == 1
+           TARGET = 1;
+           MUTUAL_INTERFERENCE = 0;
+       elseif scenType == 2
+           TARGET = 0;
+       elseif scenType == 3
+           TARGET = 1;
+       else
+           TARGET = 0;
+           itfer_speed = car_speed;
+           itfer_init_pos = car_init_pos;
+       end
+       
+       PLOT = 1;
+       prevEnv( Nsweep, tm,...
+            radar_init_pos, car_init_pos, itfer_init_pos,...
+            radar_speed, car_speed, itfer_speed, PLOT, MUTUAL_INTERFERENCE, TARGET);
        display('Plot Preview Environment')
        display('------------------');
     end

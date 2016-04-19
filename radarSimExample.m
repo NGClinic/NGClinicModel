@@ -16,7 +16,7 @@ tgt_speed_x = 30/((tm)*(Nsweep-1));   %m/s,
 tgt_init_pos = [10;0;0.5];            %m
 % itfer_speed_x = 0;
 % itfer_init_pos = [10, 3.048, 0.5]';% Car lanes are about 10 ft --> 3.6576 m
-itferData = [10, 3.048, 0;
+itferData = [10, 3.048, 3;
              15, -3.048,0];
 target = 'car';
 wave = 1;
@@ -63,9 +63,8 @@ PLOT.CHIRP = 0;
 ONE_WAY_CHANNEL = 0;
 SAVE = 0;
 PHASE_SHIFT = 0;
-TARGET = 1;
-MUTUAL_INTERFERENCE = 1;
-TARGET = 1;
+MUTUAL_INTERFERENCE = 0;
+TARGET = 0;
 SCEN_TYPE = '1'; %1,2,3,4,'custom'
 fileName = 'filename.mat';
 

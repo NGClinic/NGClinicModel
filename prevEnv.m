@@ -20,10 +20,12 @@ radarPos = [radarPosX
 tgtPos = [tgtPosX
              tgt_init_pos(2)*ones(1,len)
              tgt_init_pos(3)*ones(1,len)]';
+itferPos = zeros(size(tgtPos));
 radarVel = [radar_speed_x*ones(1,len)
             zeros(1,len); zeros(1,len)]';
 tgtVel = [tgt_speed_x*ones(1,len)
     zeros(1,len); zeros(1,len)]';
+itferVel = zeros(size(tgtVel));
 
        
          

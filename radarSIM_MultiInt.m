@@ -45,8 +45,35 @@ fs_bs = fs/n;
 
 
 %% >>>> Change this so it iterates and creates multiple for each set of parameters
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEW CODE
+num = length(inputArray(:,1));
+hwavArray = cell(num,1);
+fs = ;
+tm = 10;
+bw = 2-;
+for i=1:num
+    hwavArray{i} = phased.FMCWWaveform('SweepTime',tm/2,'SweepBandwidth',bw,...
+    'SampleRate',fs, 'SweepDirection', 'Triangle', 'NumSweeps', 2);
+        for j=1:num
+            tm{j} = inputArray(:,2);
+                for k=1:num
+                    bw{k} = inputArray(:,3);
+                        for m=1:num
+                            fs{m} = inputArray(:,4);
+                        end
+                end
+        end
+end
+
+for n=1:num
+    n
+    hwavArray{n}
+end
+
 hwav_INT = phased.FMCWWaveform('SweepTime',tm_INT/2,'SweepBandwidth',bw_INT,...
     'SampleRate',fs, 'SweepDirection', 'Triangle', 'NumSweeps',2*(tm/tm_INT)); %full triangle
+    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% END NEW CODE
 
 %% Radar Parameters -------------------------------------------------------
 hradarplatform = phased.Platform('InitialPosition',radar_init_pos,...
@@ -168,6 +195,8 @@ for m = 1:Nsweep
     if MUTUAL_INTERFERENCE
         % Beat signal with interference
         %%>>>> Create each new interfering wave
+        
+        
         xitfer_gen = step(hwav_INT);                % Generate interfer signal
         %%%>>>> step through each on
         xitfer_t = step(htx_INT, xitfer_gen);       % Transmit interfer signal

@@ -1,6 +1,6 @@
 function numIntdlg
 close all
-f = figure('Position',[500 500 300 100]);
+f = figure('Position',[300 500 300 100]);
 
 tbLabel = uicontrol(f,'Style','text',...
                 'String','Enter Number of Interferers',...

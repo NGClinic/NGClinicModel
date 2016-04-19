@@ -48,9 +48,6 @@ fs_bs = fs/n;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% NEW CODE
 num = length(inputArray(:,1));
 hwavArray = cell(num,1);
-fs = ;
-tm = 10;
-bw = 2-;
 for i=1:num
     hwavArray{i} = phased.FMCWWaveform('SweepTime',tm/2,'SweepBandwidth',bw,...
     'SampleRate',fs, 'SweepDirection', 'Triangle', 'NumSweeps', 2);

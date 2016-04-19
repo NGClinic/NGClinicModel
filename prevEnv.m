@@ -46,7 +46,7 @@ maxItferY = 0;
 minItferY = 0;
 % Plot Vehicles
 if PLOT
-    figure
+    figure('Position',[240 230 600 500]);
     hold on
      
     plot(radarPos(:,1),radarPos(:,2), 'g-', 'DisplayName','Our Radar');
@@ -54,9 +54,9 @@ if PLOT
     plot(radarPos(end,1),radarPos(end,2), 'gx', 'DisplayName', 'End');
     
     if TARGET
-        plot(tgtPos(:,1), tgtPos(:,2), 'k-', 'DisplayName', 'Target System');
-        plot(tgtPos(1,1), tgtPos(1,2), 'ko', 'DisplayName', 'Start');
-        plot(tgtPos(end,1), tgtPos(end,2), 'kx', 'DisplayName', 'End');
+        plot(tgtPos(:,1), tgtPos(:,2), 'm-', 'DisplayName', 'Target System');
+        plot(tgtPos(1,1), tgtPos(1,2), 'mo', 'DisplayName', 'Start');
+        plot(tgtPos(end,1), tgtPos(end,2), 'mx', 'DisplayName', 'End');
     end
     
     

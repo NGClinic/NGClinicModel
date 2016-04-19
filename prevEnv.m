@@ -60,7 +60,6 @@ if PLOT
     
     if MUTUAL_INTERFERENCE
         for i=1:numInt
-            i
             % Get position and velocity data for interferer
             itferPosX = itferData(i,3).*t + itferData(i,1);
             itferPos = [itferPosX

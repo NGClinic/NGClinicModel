@@ -72,6 +72,10 @@ function interfererTable(numInt)
 
     function pbPreview_Callback(source,callbackdata)
         itferData = get(t,'Data');
+        
+        prevEnv(Nsweep, tm, radar_init_pos, car_init_pos, itferData,...
+                 radar_speed, car_speed,...
+                 1, 1, TARGET)
         display(itferData)
     end
 

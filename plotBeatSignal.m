@@ -1,9 +1,11 @@
-function beatSignalPower = plotBeatSignal( beatSignal, fs, PLOT, MUTUAL_INTERFERENCE)
-if PLOT% plot beat signal
+function time = plotBeatSignal( beatSignal, fs, PLOT, MUTUAL_INTERFERENCE)
+% plot beat signal
+if PLOT
+    % Plot signgal without interference
     figure
     subplot(211)
-    bs_t = (0:(1/fs):(((length(beatSignal.NoINT))/fs) - (1/fs)))*1000;
-    plot(bs_t, abs(beatSignal.NoINT))
+    time = (0:(1/fs):(((length(beatSignal.NoINT))/fs) - (1/fs)))*1000;
+    plot(time, real(beatSignal.NoINT),'g')
     title('Beat Signal without Interference')
     xlabel('time(ms)')
     ylabel('Amplitude')
@@ -18,13 +20,17 @@ if PLOT% plot beat signal
     title('FFT')
     xlabel('freq (Hz)')
     ylabel('|fft|')
-    xlim([-4000 4000])
+    xlim([-fs/2 fs/2])
     
+    
+    % Plot signals if mutual interference
     if MUTUAL_INTERFERENCE
+        
+        % plot signal + interference
         figure
         subplot(211)
-        bs_t = (0:(1/fs):(((length(beatSignal.INT))/fs) - (1/fs)))*1000;
-        plot(bs_t, abs(beatSignal.INT))
+        time = (0:(1/fs):(((length(beatSignal.INT))/fs) - (1/fs)))*1000;
+        plot(time, real(beatSignal.INT),'k--')
         title('Beat Signal with Interference')
         xlabel('time(ms)')
         ylabel('Amplitude')
@@ -38,12 +44,14 @@ if PLOT% plot beat signal
         title('FFT')
         xlabel('freq (Hz)')
         ylabel('|fft|')
-        xlim([-4000 4000])
+        xlim([-fs/2 fs/2])
         
+        
+        % plot just interference
         figure
         subplot(211)
-        bs_t = (0:(1/fs):(((length(beatSignal.INTonly))/fs) - (1/fs)))*1000;
-        plot(bs_t, abs(beatSignal.INTonly))
+        time = (0:(1/fs):(((length(beatSignal.INTonly))/fs) - (1/fs)))*1000;
+        plot(time, real(beatSignal.INTonly),'r')
         title('Beat Signal only Interference')
         xlabel('time(ms)')
         ylabel('Amplitude')
@@ -57,15 +65,16 @@ if PLOT% plot beat signal
         title('FFT')
         xlabel('freq (Hz)')
         ylabel('|fft|')
-        xlim([-4000 4000])
+        xlim([-fs/2 fs/2])
         
         
+        % Plot all three signals on top of each other
         figure
         subplot(211)
-        bs_t = (0:(1/fs):(((length(beatSignal.NoINT))/fs) - (1/fs)))*1000;
-        plot(bs_t, abs(beatSignal.NoINT),'g',...
-            bs_t, abs(beatSignal.INTonly),'r',...
-            bs_t, abs(beatSignal.INT),'k');
+        time = (0:(1/fs):(((length(beatSignal.NoINT))/fs) - (1/fs)))*1000;
+        plot(time, real(beatSignal.NoINT),'g',...
+            time, real(beatSignal.INTonly),'r',...
+            time, real(beatSignal.INT),'k--');
         title('Beat Signal')
         xlabel('time(ms)')
         ylabel('Amplitude')
@@ -83,7 +92,7 @@ if PLOT% plot beat signal
         xlabel('freq (Hz)')
         ylabel('|fft|')
         legend('Signal Only', 'Interference Only', 'Signal + Interference')
-        xlim([-4000 4000])
+        xlim([-fs/2 fs/2])
     end
     
 end

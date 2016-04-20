@@ -37,13 +37,19 @@ if PLOT.CHIRP
     title('FMCW signal spectrogram');
 end
 
-
+%%
 tempLen = length(step(hwav));
-n = tempLen/round(tempLen/(fs/LPmixer));
+
+% n = round(tempLen/round(tempLen/(fs/LPmixer)),-3)
+% fs_bs = fs/n
+
+n = 5^(-round(log10(LPmixer/fs)/log10(5)));
 fs_bs = fs/n;
 
 
-%% >>>> Change this so it iterates and creates multiple for each set of parameters
+
+
+%% Inteferer waveform
 numInt = size(itferPos,3);
 % If we change the bw and tm for each interferer
 % If each interferer has a different tm or bw
@@ -138,8 +144,8 @@ for m = 1:Nsweep
 
     % Beat signal without inteference
     signal.xrx = step(hrx,signal.xtgt); % receive the signal
-    xd = downsample(dechirp(signal.xrx,signal.x),n); % dechirp the signal
-        
+    xd = downsample(dechirp(signal.xrx,signal.x),ceil(n)); % dechirp the signal
+    xd = xd - mean(xd);    
     xr.NoINT(:,m) = xd;                             % buffer the dechirped signal
     beatsignal.NoINT((((tm/2)*fs_bs*2)*(m-1)+1):((tm/2)*fs_bs*2*m)) = xd;
       
@@ -161,12 +167,14 @@ for m = 1:Nsweep
         % Beat signal of chirp and interferer signal
         signal.xrx = step(hrx,(signal.xtgt + sum(signal.xitfer,2)));  % receive the signal
         xd = downsample(dechirp(signal.xrx,signal.x),n); % dechirp the signal
+        xd = xd - mean(xd); 
         xr.INT(:,m) = xd;                             % buffer the dechirped signal
         beatsignal.INT((((tm/2)*fs_bs*2)*(m-1)+1):((tm/2)*fs_bs*2*m)) = xd;
         
         % Beat of interferer only
         signal.xrx = step(hrx,sum(signal.xitfer,2));  % receive the signal
-        xd = downsample(dechirp(signal.xrx,signal.x),n); % dechirp the signal             
+        xd = downsample(dechirp(signal.xrx,signal.x),n); % dechirp the signal   
+        xd = xd - mean(xd); 
         xr.INTonly(:,m) = xd;                             % buffer the dechirped signal
         beatsignal.INTonly((((tm/2)*fs_bs*2)*(m-1)+1):((tm/2)*fs_bs*2*m)) = xd;
     end
@@ -295,4 +303,3 @@ if SAVE
     save(fileName)
 end
 toc
-end

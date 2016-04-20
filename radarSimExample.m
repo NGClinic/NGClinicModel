@@ -17,9 +17,9 @@ rad_pat = TPLink; clear TPLink;
 % Vehicle parameters ------------------------------------------------------
 % Our system
 Nsweep = 8;
-bw = 70e6; %range2bw(rangeRes,c); % Find range
+bw = 20e6; %range2bw(rangeRes,c); % Find range
 % changing the bandwith does not change the power level/ SIR calculations
-tm = 10e-3;      
+tm = 20e-3;      
 radar_speed_x = 0;                    %m/s
 radar_init_pos = [0;0;0.5];           %m
 tgt_speed_x = 30/((tm)*(Nsweep-1));   %m/s, 
@@ -27,8 +27,10 @@ tgt_init_pos = [10;0;0.5];            %m
 % itfer_speed_x = 0;
 % itfer_init_pos = [10, 3.048, 0.5]';% Car lanes are about 10 ft --> 3.6576 m
 % [x,y, xVel, tm, bw]
-itferData = [30, 3.048, 3,tm, bw ;
-             15, -3.048,0, tm/2, bw];
+itferData = [50, 3.048, 3,tm, bw ];
+%              15, -3.048,0, tm/2, bw;
+%               40, -3.048,0, tm/2, bw;
+%                55, -3.048,0, tm/2, bw];
 target = 'car';
 wave = 1;
 
@@ -49,7 +51,7 @@ end
 
 % Antenna Model Set Up ---------------------------------------------------
 % % MIT Values
-txPower = 0.65; %db2pow(5)*1e-3;                     % in watts
+txPower = 1; %db2pow(5)*1e-3;                     % in watts
 txLossFactor = 0;                             % in dB **TODO**
 
 % IF Power = -28 dBm
@@ -61,7 +63,7 @@ toc
 PLOT.VEHICLES = 1;
 PLOT.POWER = 0;
 PLOT.ACCURACY = 1;
-PLOT.PREVIEW = 1;
+PLOT.PREVIEW = 0;
 PLOT.BEATSIGNAL = 1;
 PLOT.CHIRP = 0;
 ONE_WAY_CHANNEL = 0;
@@ -69,7 +71,6 @@ SAVE = 0;
 PHASE_SHIFT = 0;
 MUTUAL_INTERFERENCE = 1;
 TARGET = 1;
-SCEN_TYPE = '1'; %1,2,3,4,'custom'
 fileName = 'filename.mat';
 
 
@@ -96,6 +97,6 @@ end
 
 
 %%
-plotBeatSignal(beatsignal, fs_bs,PLOT.BEATSIGNAL, MUTUAL_INTERFERENCE)
+bs_t = plotBeatSignal(beatsignal, fs_bs,PLOT.BEATSIGNAL, MUTUAL_INTERFERENCE)
 % load('scen23_wave1_10m.mat', 'beatsignal', 'fs_bs')
 [output] = calcSimSIR(beatsignal, fs_bs)

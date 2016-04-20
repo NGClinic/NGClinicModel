@@ -5,9 +5,19 @@ clear
 close all
 tic
 
-% Vehicle placement ------------------------------------------------------
+
+% System waveform parameters ---------------------------------------------
+fc = 2.445e9;  
+c = 3e8;   
+rangeMax = 80;   
+LPmixer = 28e3;
+load('SampleRadiationPatterns.mat', 'TPLink'); % Antenna Model
+rad_pat = TPLink; clear TPLink;
+
+% Vehicle parameters ------------------------------------------------------
 % Our system
 Nsweep = 8;
+bw = 70e6; %range2bw(rangeRes,c); % Find range
 % changing the bandwith does not change the power level/ SIR calculations
 tm = 10e-3;      
 radar_speed_x = 0;                    %m/s
@@ -16,20 +26,14 @@ tgt_speed_x = 30/((tm)*(Nsweep-1));   %m/s,
 tgt_init_pos = [10;0;0.5];            %m
 % itfer_speed_x = 0;
 % itfer_init_pos = [10, 3.048, 0.5]';% Car lanes are about 10 ft --> 3.6576 m
-itferData = [10, 3.048, 3;
-             15, -3.048,0];
+% [x,y, xVel, tm, bw]
+itferData = [30, 3.048, 3,tm, bw ;
+             15, -3.048,0, tm/2, bw];
 target = 'car';
 wave = 1;
 
 % dur = (tm)*(Nsweep-1);
-% System waveform parameters ---------------------------------------------
-fc = 2.445e9;  
-c = 3e8;   
-rangeMax = 80;   
-bw = 70e6; %range2bw(rangeRes,c); % Find range
-LPmixer = 28e3;
-load('SampleRadiationPatterns.mat', 'TPLink'); % Antenna Model
-rad_pat = TPLink; clear TPLink;
+
 
 % Interferer waveform parameters -----------------------------------------
 if wave == 1
@@ -58,7 +62,7 @@ PLOT.VEHICLES = 1;
 PLOT.POWER = 0;
 PLOT.ACCURACY = 1;
 PLOT.PREVIEW = 1;
-PLOT.BEATSIGNAL = 0;
+PLOT.BEATSIGNAL = 1;
 PLOT.CHIRP = 0;
 ONE_WAY_CHANNEL = 0;
 SAVE = 0;
@@ -76,6 +80,12 @@ fileName = 'filename.mat';
     radar_init_pos, tgt_init_pos, itferData,...
     radar_speed_x, tgt_speed_x, PLOT.PREVIEW, MUTUAL_INTERFERENCE, TARGET);
 
+%% If we included funcitonality for individual interferer waveforms
+if size(itferData,2) > 3
+    tm_INT = itferData(:,4,:);
+    bw_INT = itferData(:,5,:);
+end
+
 %% Run the function
 [~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw, bw_INT, Nsweep, LPmixer,...
     rad_pat, radarPos, itferPos, tgtPos, radarVel, itferVel, tgtVel,...
@@ -84,12 +94,6 @@ fileName = 'filename.mat';
     PLOT, MUTUAL_INTERFERENCE, TARGET, ...
     PHASE_SHIFT, SAVE, fileName, target);
 
-% [~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw, bw_INT, Nsweep, LPmixer,...
-%     rad_pat, radar_speed_x, radar_init_pos, tgt_speed_x, tgt_init_pos,...
-%     itfer_speed_x, itfer_init_pos, txPower, txLossFactor,rxNF,...
-%     rxLossFactor,...
-%     PLOT, MUTUAL_INTERFERENCE, ...
-%     PHASE_SHIFT, SAVE, fileName, target);
 
 %%
 plotBeatSignal(beatsignal, fs_bs,PLOT.BEATSIGNAL, MUTUAL_INTERFERENCE)

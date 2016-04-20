@@ -1,33 +1,56 @@
-function plotVehiclePositions( radar_pos, tgt_pos, itfer_pos,...
+function plotVehiclePositions( radarPos, tgtPos, itferPos,...
      PLOT, MUTUAL_INTERFERENCE,TARGET)
-% plot vehicle positions
+% Initialize max and min of itfer
+maxItferX = 0;
+minItferX = 0;
+maxItferY = 0;
+minItferY = 0;
+
+% Plot Vehicles
+numInt = size(itferPos,3);
 if PLOT
     figure
     hold on
-
-    if MUTUAL_INTERFERENCE
-        plot(itfer_pos(:,1), itfer_pos(:,2), 'r-', 'DisplayName', 'Interferer System');
-        plot(itfer_pos(1,1), itfer_pos(1,2), 'ro', 'DisplayName', 'Start');
-        plot(itfer_pos(end,1), itfer_pos(end,2), 'rx', 'DisplayName', 'End');
-    end
-        
-    plot(radar_pos(:,1),radar_pos(:,2), 'g-', 'DisplayName','Our Radar');
-    plot(radar_pos(1,1),radar_pos(1,2), 'go', 'DisplayName', 'Start');
-    plot(radar_pos(end,1),radar_pos(end,2), 'gx', 'DisplayName', 'End');
+     
+    % Plot transciever
+    plot(radarPos(:,1),radarPos(:,2), 'g-', 'DisplayName','Our Radar');
+    plot(radarPos(1,1),radarPos(1,2), 'go', 'DisplayName', 'Start');
+    plot(radarPos(end,1),radarPos(end,2), 'gx', 'DisplayName', 'End');
+    legend('Location', 'eastoutside')
     
+    % Plot target
     if TARGET
-        plot(tgt_pos(:,1), tgt_pos(:,2), 'k-', 'DisplayName', 'Target System');
-        plot(tgt_pos(1,1), tgt_pos(1,2), 'ko', 'DisplayName', 'Start');
-        plot(tgt_pos(end,1), tgt_pos(end,2), 'kx', 'DisplayName', 'End');
+        plot(tgtPos(:,1), tgtPos(:,2), 'm-', 'DisplayName', 'Target System');
+        plot(tgtPos(1,1), tgtPos(1,2), 'mo', 'DisplayName', 'Start');
+        plot(tgtPos(end,1), tgtPos(end,2), 'mx', 'DisplayName', 'End');
+        legend('Location', 'eastoutside')
+    end
+              
+    % Plot interferer(s)
+    if MUTUAL_INTERFERENCE
+        for i=1:numInt
+            plot(itferPos(:,1,i), itferPos(:,2,i), 'r-', 'DisplayName', 'Interferer System');
+            plot(itferPos(1,1,i), itferPos(1,2,i), 'ro', 'DisplayName', 'Start');
+            plot(itferPos(end,1,i), itferPos(end,2,i), 'rx', 'DisplayName', 'End');
+           
+            % Calculate range of positions for scaling
+            maxItferX = max(maxItferX, max(itferPos(:,1,i)));
+            minItferX = min(minItferX, min(itferPos(:,1,i)));
+            maxItferY = max(maxItferY, max(itferPos(:,2,i)));
+            minItferY = min(minItferY, min(itferPos(:,2,i)));
+            
+            if i == 1
+                legend('Location', 'eastoutside')
+            end       
+        end
     end
     
+    % Label axis and title
     xlabel('X (m)')
     ylabel('Y (m)')
-    legend('Location', 'eastoutside')
     title('Position of Vehicles')
-%     zoom out
-    xlim([-5 max(max(itfer_pos(:,1)),max(tgt_pos(:,1)))+5])
-     ylim([(min(min(itfer_pos(:,2)),min(tgt_pos(:,2)))-2) (max(max(itfer_pos(:,2)),max(tgt_pos(:,2)))+2)])
+    xlim([(min(0, minItferX)-5) (max(maxItferX,max(tgtPos(:,1)))+5)])
+    ylim([(min(minItferY,min(tgtPos(:,2)))-2) (max(maxItferY,max(tgtPos(:,2)))+2)])
     grid on
     hold off
 end

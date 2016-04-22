@@ -13,14 +13,14 @@ if PLOT
     hold on
      
     % Plot transciever
-    plot(radarPos(:,1),radarPos(:,2), 'g-', 'DisplayName','Our Radar');
+    plot(radarPos(:,1),radarPos(:,2), 'g-', 'DisplayName','Transceiver ');
     plot(radarPos(1,1),radarPos(1,2), 'go', 'DisplayName', 'Start');
     plot(radarPos(end,1),radarPos(end,2), 'gx', 'DisplayName', 'End');
     legend('Location', 'eastoutside')
     
     % Plot target
     if TARGET
-        plot(tgtPos(:,1), tgtPos(:,2), 'm-', 'DisplayName', 'Target System');
+        plot(tgtPos(:,1), tgtPos(:,2), 'm-', 'DisplayName', 'Target');
         plot(tgtPos(1,1), tgtPos(1,2), 'mo', 'DisplayName', 'Start');
         plot(tgtPos(end,1), tgtPos(end,2), 'mx', 'DisplayName', 'End');
         legend('Location', 'eastoutside')
@@ -29,7 +29,7 @@ if PLOT
     % Plot interferer(s)
     if MUTUAL_INTERFERENCE
         for i=1:numInt
-            plot(itferPos(:,1,i), itferPos(:,2,i), 'r-', 'DisplayName', 'Interferer System');
+            plot(itferPos(:,1,i), itferPos(:,2,i), 'r-', 'DisplayName', 'Interferer');
             plot(itferPos(1,1,i), itferPos(1,2,i), 'ro', 'DisplayName', 'Start');
             plot(itferPos(end,1,i), itferPos(end,2,i), 'rx', 'DisplayName', 'End');
            

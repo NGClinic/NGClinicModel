@@ -19,7 +19,7 @@ output.interfererDB = 10*log10(interfererP);
 output.sigIntDB = 10*log10(sigIntP);
 output.sirDirect = 10*log10(signalP/interfererP);
 output.sirIndirect = 10*log10((sigIntP - interfererP)/(sigIntP - signalP));
-display(horzcat('SIR is ', num2str(output.sirDirect), ' dB'))
-display(horzcat('SIR is ', num2str(output.sirIndirect), ' dB'))
+% display(horzcat('SIR is ', num2str(output.sirDirect), ' dB'))
+% display(horzcat('SIR is ', num2str(output.sirIndirect), ' dB'))
 
 end

@@ -17,27 +17,18 @@ rad_pat = TPLink; clear TPLink;
 % Vehicle parameters ------------------------------------------------------
 % Our system
 Nsweep = 8;
-bw = 20e6; %range2bw(rangeRes,c); % Find range
+bw = 20e6; %range2bw(rangeRes,c); % Increasing bandwidth improves resolution
 % changing the bandwith does not change the power level/ SIR calculations
-tm = 20e-3;      
+% but makes simulation faster
+tm = 10e-3;      
 radar_speed_x = 0;                    %m/s
 radar_init_pos = [0;0;0.5];           %m
-tgt_speed_x = 30/((tm)*(Nsweep-1));   %m/s, 
+tgt_speed_x = 34;%/((tm)*(Nsweep-1));   %m/s, 
 tgt_init_pos = [10;0;0.5];            %m
-% itfer_speed_x = 0;
-% itfer_init_pos = [10, 3.048, 0.5]';% Car lanes are about 10 ft --> 3.6576 m
-% [x,y, xVel, tm, bw]
-itferData = [50, 3.048, 3,tm, bw ];
-%              15, -3.048,0, tm/2, bw;
-%               40, -3.048,0, tm/2, bw;
-%                55, -3.048,0, tm/2, bw];
-target = 'car';
-wave = 1;
-
-% dur = (tm)*(Nsweep-1);
-
 
 % Interferer waveform parameters -----------------------------------------
+wave = 1;
+
 if wave == 1
     bw_INT = bw;%*0.2577; %40e6;
     tm_INT = tm;%/2;
@@ -48,6 +39,13 @@ elseif wave == 3
     bw_INT = bw*0.2577; %40e6;
     tm_INT = tm/2;
 end
+
+% itferData = [x, y, dx, tm, bw]
+itferData = [50, 3.048, -40, tm_INT, bw_INT ];
+%              15, -3.048,0, tm/2, bw;
+%               40, -3.048,0, tm/2, bw;
+%                55, -3.048,0, tm/2, bw];
+target = 'car';
 
 % Antenna Model Set Up ---------------------------------------------------
 % % MIT Values
@@ -61,7 +59,6 @@ toc
 
 % Turn on and off sections of code ---------------------------------------
 PLOT.VEHICLES = 1;
-PLOT.POWER = 0;
 PLOT.ACCURACY = 1;
 PLOT.PREVIEW = 0;
 PLOT.BEATSIGNAL = 1;
@@ -88,15 +85,19 @@ if size(itferData,2) > 3
 end
 
 %% Run the function
-[~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw, bw_INT, Nsweep, LPmixer,...
-    rad_pat, radarPos, itferPos, tgtPos, radarVel, itferVel, tgtVel,...
-    txPower, txLossFactor,rxNF,...
-    rxLossFactor,...
-    PLOT, MUTUAL_INTERFERENCE, TARGET, ...
-    PHASE_SHIFT, SAVE, fileName, target);
+% [~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw, bw_INT, Nsweep, LPmixer,...
+%     rad_pat, radarPos, itferPos, tgtPos, radarVel, itferVel, tgtVel,...
+%     txPower, txLossFactor,rxNF,...
+%     rxLossFactor,...
+%     PLOT, MUTUAL_INTERFERENCE, TARGET, ...
+%     PHASE_SHIFT, SAVE, fileName, target);
 
+% clearvars -except beatsignal fs_bs
 
 %%
-bs_t = plotBeatSignal(beatsignal, fs_bs,PLOT.BEATSIGNAL, MUTUAL_INTERFERENCE)
-% load('scen23_wave1_10m.mat', 'beatsignal', 'fs_bs')
-[output] = calcSimSIR(beatsignal, fs_bs)
+% bs_t = plotBeatSignal(beatsignal, fs_bs,PLOT.BEATSIGNAL, MUTUAL_INTERFERENCE);
+% % load('scen23_wave1_10m.mat', 'beatsignal', 'fs_bs')
+% [output] = calcSimSIR(beatsignal, fs_bs)
+
+
+

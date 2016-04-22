@@ -16,14 +16,15 @@ rad_pat = TPLink; clear TPLink;
 
 % Vehicle parameters ------------------------------------------------------
 % Our system
-Nsweep = 8;
-bw = 20e6; %range2bw(rangeRes,c); % Increasing bandwidth improves resolution
+Nsweep = 50;
+rangeRes = 1;
+bw = range2bw(rangeRes,c); % Increasing bandwidth improves resolution
 % changing the bandwith does not change the power level/ SIR calculations
 % but makes simulation faster
 tm = 10e-3;      
 radar_speed_x = 0;                    %m/s
 radar_init_pos = [0;0;0.5];           %m
-tgt_speed_x = 34;%/((tm)*(Nsweep-1));   %m/s, 
+tgt_speed_x = 0; %30/((tm)*(Nsweep-1));   %m/s, 
 tgt_init_pos = [10;0;0.5];            %m
 
 % Interferer waveform parameters -----------------------------------------
@@ -40,9 +41,9 @@ elseif wave == 3
     tm_INT = tm/2;
 end
 
-% itferData = [x, y, dx, tm, bw]
-itferData = [50, 3.048, -40, tm_INT, bw_INT ];
-%              15, -3.048,0, tm/2, bw;
+% itferData = [x, y, dx, tm, bw] -100/((tm)*(Nsweep-1)/2)
+itferData = [100, 3.048, -200/((tm)*(Nsweep-1)/2), tm_INT, bw_INT];
+%             15, -3.048,0, tm/2, bw;
 %               40, -3.048,0, tm/2, bw;
 %                55, -3.048,0, tm/2, bw];
 target = 'car';
@@ -60,25 +61,26 @@ toc
 % Turn on and off sections of code ---------------------------------------
 PLOT.VEHICLES = 1;
 PLOT.ACCURACY = 1;
-PLOT.PREVIEW = 0;
+PLOT.PREVIEW = 1;
 PLOT.BEATSIGNAL = 1;
 PLOT.CHIRP = 0;
+PLOT.SIR = 1;
 ONE_WAY_CHANNEL = 0;
 SAVE = 0;
 PHASE_SHIFT = 0;
 MUTUAL_INTERFERENCE = 1;
-TARGET = 0;
+TARGET = 1;
 fileName = 'filename.mat';
 
 
-%% Preview vehicle positions
+% Preview vehicle positions
 % get the duration of the simulation
 [radarPos, tgtPos, itferPos,...
     radarVel, tgtVel, itferVel] = prevEnv(Nsweep, tm,...
     radar_init_pos, tgt_init_pos, itferData,...
     radar_speed_x, tgt_speed_x, PLOT.PREVIEW, MUTUAL_INTERFERENCE, TARGET);
 
-%% If we included funcitonality for individual interferer waveforms
+% If we included funcitonality for individual interferer waveforms
 if size(itferData,2) > 3
     tm_INT = itferData(:,4,:);
     bw_INT = itferData(:,5,:);
@@ -91,13 +93,13 @@ end
     rxLossFactor,...
     PLOT, MUTUAL_INTERFERENCE, TARGET, ...
     PHASE_SHIFT, SAVE, fileName, target);
-
-% clearvars -except beatsignal fs_bs
-
-%%
-bs_t = plotBeatSignal(beatsignal, fs_bs,PLOT.BEATSIGNAL, MUTUAL_INTERFERENCE, TARGET);
-% % load('scen23_wave1_10m.mat', 'beatsignal', 'fs_bs')
-% [output] = calcSimSIR(beatsignal, fs_bs)
+% 
+% % clearvars -except beatsignal fs_bs
+% 
+ %%
+% bs_t = plotBeatSignal(beatsignal, fs_bs,PLOT.BEATSIGNAL, MUTUAL_INTERFERENCE, TARGET);
+% % % load('scen23_wave1_10m.mat', 'beatsignal', 'fs_bs')
+% % [output] = calcSimSIR(beatsignal, fs_bs)
 
 
 

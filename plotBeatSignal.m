@@ -1,7 +1,7 @@
 function time = plotBeatSignal( beatsignal, fs, PLOT, MUTUAL_INTERFERENCE, TARGET)
 % plot beat signal
 if PLOT
-    
+    XLim = [-fs/2 fs/2];
     % Plot signals if mutual interference
     if MUTUAL_INTERFERENCE
         if TARGET
@@ -30,7 +30,7 @@ if PLOT
             xlabel('freq (Hz)')
             ylabel('|fft|')
             legend('Signal Only', 'Interference Only', 'Signal + Interference')
-            xlim([-3000 3000])
+            xlim(XLim)
             grid on
 
 
@@ -54,7 +54,7 @@ if PLOT
             title('FFT')
             xlabel('freq (Hz)')
             ylabel('|fft|')
-            xlim([-3000 3000])
+            xlim(XLim)
             grid on
         end
         
@@ -79,7 +79,7 @@ if PLOT
         title('FFT')
         xlabel('freq (Hz)')
         ylabel('|fft|')
-        xlim([-3000 3000])  
+        xlim(XLim)  
         grid on
         
     end
@@ -106,7 +106,7 @@ if PLOT
         title('FFT')
         xlabel('freq (Hz)')
         ylabel('|fft|')
-        xlim([-3000 3000])
+        xlim(XLim)
         grid on
     end
     

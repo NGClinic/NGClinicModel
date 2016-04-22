@@ -14,7 +14,7 @@ plot(az,axdB)
 axis([min(az) max(az) (min(axdB)-5) (max(axdB)+5)])
 grid on
 xlabel('Azimuth (deg.)')
-ylabel('Directivity (dBi)')
+ylabel('Directivity (dB)')
 title('Array Directivity Variation-Elevation  = 0 deg.')
 
 subplot(212)
@@ -24,7 +24,7 @@ plot(el,eldB)
 axis([min(el) max(el) (min(eldB)-5) (max(eldB) + 5)])
 grid on
 xlabel('Elevation (deg.)')
-ylabel('Directivity (dBi)')
+ylabel('Directivity (dB)')
 title('Array Directivity Variation-Azimuth = 0 deg.')
 suptitle(name)
 end

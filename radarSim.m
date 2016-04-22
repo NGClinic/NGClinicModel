@@ -43,7 +43,7 @@ end
 numInt = size(itferPos,3);
 hwavItfer = cell(numInt,1);
 tm_INT = (2.^nextpow2(tm_INT./tm)).*tm;
-for i = numInt
+for i = 1:numInt
     hwavItfer{i} = phased.FMCWWaveform('SweepTime',tm_INT(i)/2,...
         'SweepBandwidth',bw_INT(i), 'SampleRate',fs, 'SweepDirection',...
         'Triangle', 'NumSweeps',numChirpsSweeps*(tm/tm_INT(i))); %full triangle
@@ -105,95 +105,125 @@ n = 5^(-round(log10(LPmixer/fs)/log10(5)));
 fs_bs = fs/n;
 
 %Initializing zero-vectors
-signal.xitfer = zeros(length(step(hwav)), numInt);
-xr.NoINT = zeros(length(step(hwav))/n, Nsweep);
-xr.INT = zeros(length(step(hwav))/n, Nsweep);
+lenData = length(step(hwav));
+signal.xitfer = zeros(lenData, numInt);
+signal.xitferRX = zeros(lenData, numInt);
+xr.NoINT = zeros(lenData/n, Nsweep);
+xr.INT = zeros(lenData/n, Nsweep);
 beatsignal.NoINT = zeros((tm/2)*fs_bs*numChirpsSweeps*Nsweep, 1);
 beatsignal.INT = zeros((tm/2)*fs_bs*numChirpsSweeps*Nsweep, 1);
 beatsignal.INTonly = zeros((tm/2)*fs_bs*numChirpsSweeps*Nsweep, 1);
+
+% Calculate target angle
+tgt_ang = atan2(tgtPos(:,2) - radarPos(:,2), tgtPos(:,1) - radarPos(:,1));
+    
 SIR = zeros(Nsweep,1);
+disp('Time to complete setting up variables in radarSim...')
 toc
 %% Simulation Loop --------------------------------------------------------
 
-for m = 1:Nsweep    
-    % Calculate angle
-    tgt_ang = atan2(tgtPos(m,2) - radarPos(m,2), tgtPos(m,1) - radarPos(m,1));
-    int_ang = atan2(itferPos(m,2) - radarPos(m,2), itferPos(m,1) - radarPos(m,1));
-    
-    % Release so you can change object parameters
-    release(htx); release(hrx); release(htx_INT);
-    
-    % Update the gain from the system
-    htx.Gain = 13.4 + interp1(rad_pat.az, rad_pat.azdB, radtodeg(tgt_ang(1)));
-    hrx.Gain = 13.4 + interp1(rad_pat.az, rad_pat.azdB, radtodeg(-tgt_ang(1)));
-    htx_INT.Gain = 13.4 + interp1(rad_pat.az, rad_pat.azdB, radtodeg(int_ang(1)))/2;
-    
+for m = 1:Nsweep      
 
     % Generate Our Signal
     signal.x = step(hwav);                      % generate the FMCW signal
     signal.xt = step(htx, signal.x);            % transmit the signal
 
-    if TARGET
+    if TARGET               
+        % Release so you can change object parameters
+        release(htx); release(hrx);
+
+        % Update the gain for transceiver to target based on angle
+        htx.Gain = 13.4 + interp1(rad_pat.az, rad_pat.azdB, radtodeg(tgt_ang(m)));
+        hrx.Gain = interp1(rad_pat.az, rad_pat.azdB, radtodeg(-tgt_ang(m)));
+    
+        % Propagate Signal
         signal.xp = step(hchannel_twoway,...
             signal.xt,...
             radarPos(m,:)',....
             tgtPos(m,:)',...
             radarVel(m,:)',...
-            tgtVel(m,:)');                          % Propagate signal
-        signal.xtgt = step(hTgt,signal.xp);         % Reflect the signal
-
+            tgtVel(m,:)');    
+        
+        % Reflect signal off target
+        signal.xtgt = step(hTgt,signal.xp);         
+        
+        % Receive reflected signal
+        signal.xtgtRX = step(hrx,signal.xtgt); 
+        
         % Beat signal without inteference
-        signal.xrx = step(hrx,signal.xtgt); % receive the signal
-        xd = downsample(dechirp(signal.xrx,signal.x),ceil(n)); % dechirp the signal
-        xd = xd - mean(xd);    
-        xr.NoINT(:,m) = xd;                                    % buffer the dechirped signal
-        beatsignal.NoINT((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = xd;
+        beatSignalTgt = downsample(dechirp(signal.xtgtRX,signal.x),n);
+        xr.NoINT(:,m) = beatSignalTgt;                                    % buffer the dechirped signal
+        beatsignal.NoINT((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = beatSignalTgt;
     end
     
     % If mutual interference
     if MUTUAL_INTERFERENCE
-        % Beat signal with interference
-        
-        for int = 1:numInt
-            xitfer_gen = step(hwavItfer{int});          % Generate interfer signal
-            xitfer_t = step(htx_INT, xitfer_gen);       % Transmit interfer signal
+                
+        % Iterate through number of interferers     
+        for int = 1:numInt   
+            
+            % Calculate angle
+            int_ang = atan2(itferPos(m,2,int) - radarPos(m,2), itferPos(m,1,int) - radarPos(m,1));
+            
+            % Release so you can change parameters
+            release(hrx); release(htx_INT); 
+            
+            % Update gain based on angle
+            hrx.Gain = interp1(rad_pat.az, rad_pat.azdB, radtodeg(-int_ang));
+            htx_INT.Gain = 13.4 + interp1(rad_pat.az, rad_pat.azdB, radtodeg(-int_ang));
+            
+            % Generate interfer signal
+            xitfer_gen = step(hwavItfer{int});         
+            
+            % Transmit interfer signal
+            xitfer_t = step(htx_INT, xitfer_gen);      
+            
+            % Propagate through channel    
             signal.xitfer(:,int) = step(hchannel_oneway, xitfer_t, ...
                 itferPos(m,:,int)', radarPos(m,:)',...
-                itferVel(m,:,int)', radarVel(m,:)');  % Propagate through channel               
+                itferVel(m,:,int)', radarVel(m,:)');    
+            
+            % Introduce phase shift to interferer signal
             if PHASE_SHIFT
                 signal.xitfer(:, int) = circshift(signal.xitfer,[length(signal.xitfer)/2 length(signal.xitfer)/2]);
             end
+            
+            % Receive interferer signal
+            signal.xitferRX(:,int) = step(hrx, signal.xitfer(:,int));
+            
+            
         end
+        % Beat signal of interferer
+        xdItfer = downsample(dechirp(signal.xitferRX, signal.x),n);
         
-        % Beat of interferer only
-        signal.xrx = step(hrx,sum(signal.xitfer,2));    % receive the signal
-        xd = downsample(dechirp(signal.xrx,signal.x),n);% dechirp the signal   
-        xd = xd - mean(xd); 
-        xr.INTonly(:,m) = xd;                           % buffer the dechirped signal
-        beatsignal.INTonly((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = xd;
-        SIR(m) = 20*log10(rms(beatsignal.INTonly)/rms(beatsignal.NoINT));
+        % Sum of beat signal of interferer(s)
+        beatSignalItfer = sum(xdItfer,2);
+        xr.INTonly(:,m) = beatSignalItfer;                           
+        beatsignal.INTonly((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = beatSignalItfer;
+        SIR(m) = 20*log10(rms(beatsignal.NoINT)/rms(beatsignal.INTonly));
 
         if TARGET
             % Beat signal of chirp and interferer signal
-            signal.xrx = step(hrx,(signal.xtgt + sum(signal.xitfer,2)));  % receive the signal
-            xd = downsample(dechirp(signal.xrx,signal.x),n);% dechirp the signal
-            xd = xd - mean(xd); 
-            xr.INT(:,m) = xd;                               % buffer the dechirped signal
-            beatsignal.INT((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = xd;
+            beatSignalTgtItfer = beatSignalTgt + beatSignalItfer;
+            xr.INT(:,m) = beatSignalTgtItfer;                            % buffer the dechirped signal
+            beatsignal.INT((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = beatSignalTgtItfer;
         end
 
     end
    
 end
-clear xd
+disp('Time to complete simulation loop...')
 toc
 
 %% Plot SIR
-if TARGET
+clear xd
+if and(TARGET, PLOT.SIR)
     figure
-    plot(1:Nsweep, SIR)
+    intDist = sqrt((itferPos(:,2) - radarPos(:,2)).^2 + (itferPos(:,1) - radarPos(:,1)).^2);
+  %  intDist = itferPos(:,1);
+    plot(intDist, SIR,'.-')
     title('SIR')
-    xlabel('Nsweep'); ylabel('SIR')
+    xlabel('Distance Interferer'); ylabel('SIR')
 end
 %%
 
@@ -330,4 +360,5 @@ end
 if SAVE
     save(fileName)
 end
+disp('Time to complete radarSim fuction call....')
 toc

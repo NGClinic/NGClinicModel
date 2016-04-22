@@ -1,10 +1,10 @@
-% function [output, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw,...
-%     bw_INT, Nsweep, LPmixer,...
-%     rad_pat, radarPos, itferPos, tgtPos, radarVel, itferVel, tgtVel,...
-%     txPower, txLossFactor,rxNF,...
-%     rxLossFactor,...
-%     PLOT, MUTUAL_INTERFERENCE, TARGET,...
-%     PHASE_SHIFT, SAVE, fileName, target)
+function [output, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw,...
+    bw_INT, Nsweep, LPmixer,...
+    rad_pat, radarPos, itferPos, tgtPos, radarVel, itferVel, tgtVel,...
+    txPower, txLossFactor,rxNF,...
+    rxLossFactor,...
+    PLOT, MUTUAL_INTERFERENCE, TARGET,...
+    PHASE_SHIFT, SAVE, fileName, target)
 
 %% FMCW Example -----------------------------------------------------------
 % Based on Automotive Radar Example from Matlab
@@ -114,6 +114,7 @@ beatsignal.INTonly = zeros((tm/2)*fs_bs*numChirpsSweeps*Nsweep, 1);
 SIR = zeros(Nsweep,1);
 toc
 %% Simulation Loop --------------------------------------------------------
+
 for m = 1:Nsweep    
     % Calculate angle
     tgt_ang = atan2(tgtPos(m,2) - radarPos(m,2), tgtPos(m,1) - radarPos(m,1));
@@ -127,25 +128,28 @@ for m = 1:Nsweep
     hrx.Gain = 13.4 + interp1(rad_pat.az, rad_pat.azdB, radtodeg(-tgt_ang(1)));
     htx_INT.Gain = 13.4 + interp1(rad_pat.az, rad_pat.azdB, radtodeg(int_ang(1)))/2;
     
+
     % Generate Our Signal
     signal.x = step(hwav);                      % generate the FMCW signal
     signal.xt = step(htx, signal.x);            % transmit the signal
-       
-    signal.xp = step(hchannel_twoway,...
-        signal.xt,...
-        radarPos(m,:)',....
-        tgtPos(m,:)',...
-        radarVel(m,:)',...
-        tgtVel(m,:)');                          % Propagate signal
-    signal.xtgt = step(hTgt,signal.xp);         % Reflect the signal
 
-    % Beat signal without inteference
-    signal.xrx = step(hrx,signal.xtgt); % receive the signal
-    xd = downsample(dechirp(signal.xrx,signal.x),ceil(n)); % dechirp the signal
-    xd = xd - mean(xd);    
-    xr.NoINT(:,m) = xd;                                    % buffer the dechirped signal
-    beatsignal.NoINT((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = xd;
-      
+    if TARGET
+        signal.xp = step(hchannel_twoway,...
+            signal.xt,...
+            radarPos(m,:)',....
+            tgtPos(m,:)',...
+            radarVel(m,:)',...
+            tgtVel(m,:)');                          % Propagate signal
+        signal.xtgt = step(hTgt,signal.xp);         % Reflect the signal
+
+        % Beat signal without inteference
+        signal.xrx = step(hrx,signal.xtgt); % receive the signal
+        xd = downsample(dechirp(signal.xrx,signal.x),ceil(n)); % dechirp the signal
+        xd = xd - mean(xd);    
+        xr.NoINT(:,m) = xd;                                    % buffer the dechirped signal
+        beatsignal.NoINT((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = xd;
+    end
+    
     % If mutual interference
     if MUTUAL_INTERFERENCE
         % Beat signal with interference
@@ -161,13 +165,6 @@ for m = 1:Nsweep
             end
         end
         
-        % Beat signal of chirp and interferer signal
-        signal.xrx = step(hrx,(signal.xtgt + sum(signal.xitfer,2)));  % receive the signal
-        xd = downsample(dechirp(signal.xrx,signal.x),n);% dechirp the signal
-        xd = xd - mean(xd); 
-        xr.INT(:,m) = xd;                               % buffer the dechirped signal
-        beatsignal.INT((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = xd;
-        
         % Beat of interferer only
         signal.xrx = step(hrx,sum(signal.xitfer,2));    % receive the signal
         xd = downsample(dechirp(signal.xrx,signal.x),n);% dechirp the signal   
@@ -175,17 +172,29 @@ for m = 1:Nsweep
         xr.INTonly(:,m) = xd;                           % buffer the dechirped signal
         beatsignal.INTonly((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = xd;
         SIR(m) = 20*log10(rms(beatsignal.INTonly)/rms(beatsignal.NoINT));
+
+        if TARGET
+            % Beat signal of chirp and interferer signal
+            signal.xrx = step(hrx,(signal.xtgt + sum(signal.xitfer,2)));  % receive the signal
+            xd = downsample(dechirp(signal.xrx,signal.x),n);% dechirp the signal
+            xd = xd - mean(xd); 
+            xr.INT(:,m) = xd;                               % buffer the dechirped signal
+            beatsignal.INT((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = xd;
+        end
+
     end
    
 end
 clear xd
 toc
 
-%%
-figure
-plot(1:Nsweep, SIR)
-title('SIR')
-xlabel('Nsweep'); ylabel('SIR')
+%% Plot SIR
+if TARGET
+    figure
+    plot(1:Nsweep, SIR)
+    title('SIR')
+    xlabel('Nsweep'); ylabel('SIR')
+end
 %%
 
 % Save memory!
@@ -194,15 +203,17 @@ clear hitferplatform hradarplatform hrx hspec htx htx_INT
 clear i int_ang int_rng xitfer_gen
 
 %% Plot Beat Signal TD and FD ---------------------------------------------
-plotBeatSignal(beatsignal, fs_bs, PLOT.BEATSIGNAL, MUTUAL_INTERFERENCE);
+plotBeatSignal(beatsignal, fs_bs, PLOT.BEATSIGNAL, MUTUAL_INTERFERENCE, TARGET);
 
 %% Plotting Vehicle Positions ---------------------------------------------
 plotVehiclePositions(radarPos, tgtPos, itferPos, ...
         PLOT.VEHICLES, MUTUAL_INTERFERENCE,TARGET);
 
 %% Process beat signal for calculations----------------------------------
-xr_upsweep_NoINT = xr.NoINT(1:hwav.SweepTime*fs_bs,:);
-xr_downsweep_NoINT = xr.NoINT((hwav.SweepTime*fs_bs):end, :);
+if TARGET
+    xr_upsweep_NoINT = xr.NoINT(1:hwav.SweepTime*fs_bs,:);
+    xr_downsweep_NoINT = xr.NoINT((hwav.SweepTime*fs_bs):end, :);
+end
 
 if MUTUAL_INTERFERENCE
     xr_upsweep_INT = xr.INT(1:hwav.SweepTime*fs_bs,:);
@@ -235,49 +246,53 @@ end
 
 
 %% Calculation Range Distance ---------------------------------------------
-fbu_rng_NoINT = rootmusic(pulsint(xr_upsweep_NoINT,'coherent'),1,fs_bs);
-fbd_rng_NoINT = rootmusic(pulsint(xr_downsweep_NoINT,'coherent'),1,fs_bs);
-output.rng_est_NoINT = beat2range([fbu_rng_NoINT fbd_rng_NoINT],sweep_slope,c)/2;
-fd_NoINT = -(fbu_rng_NoINT+fbd_rng_NoINT)/2;
-output.v_est_NoINT = dop2speed(fd_NoINT,lambda)/2;
-
-rng_est_NoINT = zeros(Nsweep,1);
-rng_true_NoINT = zeros(Nsweep,1);
-v_est_NoINT = zeros(Nsweep, 1);
-
-% Calculation if no interference
-for i = 1:Nsweep
-    fbu_rng_NoINT = rootmusic(pulsint(xr_upsweep_NoINT(:,i),'coherent'),1,fs_bs);
-    fbd_rng_NoINT = rootmusic(pulsint(xr_downsweep_NoINT(:,i),'coherent'),1,fs_bs);
-    rng_est_NoINT(i) = beat2range([fbu_rng_NoINT fbd_rng_NoINT],sweep_slope,c)/2;
+if (TARGET)
+    fbu_rng_NoINT = rootmusic(pulsint(xr_upsweep_NoINT,'coherent'),1,fs_bs);
+    fbd_rng_NoINT = rootmusic(pulsint(xr_downsweep_NoINT,'coherent'),1,fs_bs);
+    output.rng_est_NoINT = beat2range([fbu_rng_NoINT fbd_rng_NoINT],sweep_slope,c)/2;
     fd_NoINT = -(fbu_rng_NoINT+fbd_rng_NoINT)/2;
-    v_est_NoINT(i) = dop2speed(fd_NoINT,lambda)/2;
-    rng_true_NoINT(i) = sqrt(sum((radarPos(i,:)-tgtPos(i,:)).^2));
-end
+    output.v_est_NoINT = dop2speed(fd_NoINT,lambda)/2;
+
+    rng_est_NoINT = zeros(Nsweep,1);
+    rng_true_NoINT = zeros(Nsweep,1);
+    v_est_NoINT = zeros(Nsweep, 1);
+
+    % Calculation if no interference
+    for i = 1:Nsweep
+        fbu_rng_NoINT = rootmusic(pulsint(xr_upsweep_NoINT(:,i),'coherent'),1,fs_bs);
+        fbd_rng_NoINT = rootmusic(pulsint(xr_downsweep_NoINT(:,i),'coherent'),1,fs_bs);
+        rng_est_NoINT(i) = beat2range([fbu_rng_NoINT fbd_rng_NoINT],sweep_slope,c)/2;
+        fd_NoINT = -(fbu_rng_NoINT+fbd_rng_NoINT)/2;
+        v_est_NoINT(i) = dop2speed(fd_NoINT,lambda)/2;
+        rng_true_NoINT(i) = sqrt(sum((radarPos(i,:)-tgtPos(i,:)).^2));
+    end
 
 % Calculation with interference
-if MUTUAL_INTERFERENCE
-    fbu_rng_INT = rootmusic(pulsint(xr_upsweep_INT,'coherent'),1,fs_bs);
-    fbd_rng_INT = rootmusic(pulsint(xr_downsweep_INT,'coherent'),1,fs_bs);
-    output.rng_est_INT = beat2range([fbu_rng_INT fbd_rng_INT],sweep_slope,c)/2;
-    fd_INT = -(fbu_rng_INT+fbd_rng_INT)/2;
-    output.v_est_INT = dop2speed(fd_INT,lambda)/2;
-
-    rng_est_INT = zeros(Nsweep,1);
-    v_est_INT = zeros(Nsweep, 1);
-    for i = 1:Nsweep
-        fbu_rng_INT = rootmusic(pulsint(xr_upsweep_INT(:,i),'coherent'),1,fs_bs);
-        fbd_rng_INT = rootmusic(pulsint(xr_downsweep_INT(:,i),'coherent'),1,fs_bs);
-        rng_est_INT(i) = beat2range([fbu_rng_INT fbd_rng_INT],sweep_slope,c)/2;
+    if (MUTUAL_INTERFERENCE)
+        fbu_rng_INT = rootmusic(pulsint(xr_upsweep_INT,'coherent'),1,fs_bs);
+        fbd_rng_INT = rootmusic(pulsint(xr_downsweep_INT,'coherent'),1,fs_bs);
+        output.rng_est_INT = beat2range([fbu_rng_INT fbd_rng_INT],sweep_slope,c)/2;
         fd_INT = -(fbu_rng_INT+fbd_rng_INT)/2;
-        v_est_INT(i) = dop2speed(fd_INT,lambda)/2;
+        output.v_est_INT = dop2speed(fd_INT,lambda)/2;
+
+        rng_est_INT = zeros(Nsweep,1);
+        v_est_INT = zeros(Nsweep, 1);
+        for i = 1:Nsweep
+            fbu_rng_INT = rootmusic(pulsint(xr_upsweep_INT(:,i),'coherent'),1,fs_bs);
+            fbd_rng_INT = rootmusic(pulsint(xr_downsweep_INT(:,i),'coherent'),1,fs_bs);
+            rng_est_INT(i) = beat2range([fbu_rng_INT fbd_rng_INT],sweep_slope,c)/2;
+            fd_INT = -(fbu_rng_INT+fbd_rng_INT)/2;
+            v_est_INT(i) = dop2speed(fd_INT,lambda)/2;
+        end
     end
+else
+    output = 0;
 end
 
 clear fd_INT fbd_rng_INT fbu_rng_INT fbu_rng_NoINT fbd_rng_NoINT fd_NoINT
 clear xr_upsweep_NoINT xr_downsweep_NoINT xr_upsweep_INT xr_downsweep_INT
 %% Plot accuracy of calculations ------------------------------------------
-if (PLOT.ACCURACY)
+if and(PLOT.ACCURACY, TARGET)
     figure
     subplot(211);
     grid on

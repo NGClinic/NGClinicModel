@@ -67,7 +67,7 @@ ONE_WAY_CHANNEL = 0;
 SAVE = 0;
 PHASE_SHIFT = 0;
 MUTUAL_INTERFERENCE = 1;
-TARGET = 1;
+TARGET = 0;
 fileName = 'filename.mat';
 
 
@@ -85,17 +85,17 @@ if size(itferData,2) > 3
 end
 
 %% Run the function
-% [~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw, bw_INT, Nsweep, LPmixer,...
-%     rad_pat, radarPos, itferPos, tgtPos, radarVel, itferVel, tgtVel,...
-%     txPower, txLossFactor,rxNF,...
-%     rxLossFactor,...
-%     PLOT, MUTUAL_INTERFERENCE, TARGET, ...
-%     PHASE_SHIFT, SAVE, fileName, target);
+[~, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw, bw_INT, Nsweep, LPmixer,...
+    rad_pat, radarPos, itferPos, tgtPos, radarVel, itferVel, tgtVel,...
+    txPower, txLossFactor,rxNF,...
+    rxLossFactor,...
+    PLOT, MUTUAL_INTERFERENCE, TARGET, ...
+    PHASE_SHIFT, SAVE, fileName, target);
 
 % clearvars -except beatsignal fs_bs
 
 %%
-% bs_t = plotBeatSignal(beatsignal, fs_bs,PLOT.BEATSIGNAL, MUTUAL_INTERFERENCE);
+bs_t = plotBeatSignal(beatsignal, fs_bs,PLOT.BEATSIGNAL, MUTUAL_INTERFERENCE, TARGET);
 % % load('scen23_wave1_10m.mat', 'beatsignal', 'fs_bs')
 % [output] = calcSimSIR(beatsignal, fs_bs)
 

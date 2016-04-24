@@ -1,10 +1,10 @@
-function [output, beatsignal, fs_bs] = radarSim(fc, tm, tm_INT, rangeMax, bw,...
+function [output, beatsignal, fs_bs, signalRMS2, interfererRMS2, SIRdB] = radarSim(fc, tm, tm_INT, rangeMax, bw,...
     bw_INT, Nsweep, LPmixer,...
     rad_pat, radarPos, itferPos, tgtPos, radarVel, itferVel, tgtVel,...
     txPower, txLossFactor,rxNF,...
     rxLossFactor,...
     PLOT, MUTUAL_INTERFERENCE, TARGET,...
-    PHASE_SHIFT, SAVE, fileName, target)
+    PHASE_SHIFT, SAVE, fileName, targetType)
 
 %% FMCW Example -----------------------------------------------------------
 % Based on Automotive Radar Example from Matlab
@@ -51,13 +51,13 @@ end
   
 %% Target Model Parameters ------------------------------------------------
 % Radar cross section for a human
-if or(strcmp(target,'human'), strcmp(target, 'person'))
+if or(strcmp(targetType,'human'), strcmp(targetType, 'person'))
     rcs = db2pow(-10);  %dBsm
-elseif strcmp(target,'truck')
+elseif strcmp(targetType,'truck')
     rcs = db2pow(min(20*log10(tgt_rng)+5,20));
-elseif strcmp(target,'motorcycle')
+elseif strcmp(targetType,'motorcycle')
     rcs = db2pow(7);
-elseif strcmp(target,'car')
+elseif strcmp(targetType,'car')
     rcs = db2pow(min(10*log10(tgt_rng)+5,20));
 else % default car
     rcs = db2pow(min(10*log10(tgt_rng)+5,20));
@@ -70,8 +70,15 @@ hchannel_twoway = phased.FreeSpace('PropagationSpeed',c,...
     'OperatingFrequency',fc,'SampleRate',fs,'TwoWayPropagation',true);
 hchannel_oneway = phased.FreeSpace('PropagationSpeed',c,...
     'OperatingFrequency',fc,'SampleRate',fs,'TwoWayPropagation',false);
-
-
+% ricianChannel = comm.RicianChannel('SampleRate', fs,...
+%     'RandomStream',        'mt19937ar with seed', ...
+%     'Seed',                10);
+% hchannel_oneway = phased.TwoRayChannel('PropagationSpeed',c,...
+%     'OperatingFrequency',fc,'SampleRate',fs);
+rChan = ricianchan;
+rChan.KFactor = 3;
+hChan = comm.AWGNChannel('NoiseMethod', 'Signal to noise ratio (SNR)');
+hChan.SNR = 30;
 %% Antenna Model Set Up ---------------------------------------------------
 % % MIT Values
 antGain =  interp1(rad_pat.az, rad_pat.azdB, 0);  % value from MIT Slide deck || 10*log10((pi*ant_dia/lambda)^2);
@@ -110,6 +117,7 @@ signal.xitfer = zeros(lenData, numInt);
 signal.xitferRX = zeros(lenData, numInt);
 xr.NoINT = zeros(lenData/n, Nsweep);
 xr.INT = zeros(lenData/n, Nsweep);
+phaseOffset = round(rand(numInt,1).*(lenData/n)); %Add a phase offset
 beatsignal.NoINT = zeros((tm/2)*fs_bs*numChirpsSweeps*Nsweep, 1);
 beatsignal.INT = zeros((tm/2)*fs_bs*numChirpsSweeps*Nsweep, 1);
 beatsignal.INTonly = zeros((tm/2)*fs_bs*numChirpsSweeps*Nsweep, 1);
@@ -117,25 +125,28 @@ beatsignal.INTonly = zeros((tm/2)*fs_bs*numChirpsSweeps*Nsweep, 1);
 % Calculate target angle
 tgt_ang = atan2(tgtPos(:,2) - radarPos(:,2), tgtPos(:,1) - radarPos(:,1));
     
-SIR = zeros(Nsweep,1);
+SIRdB = zeros(Nsweep,1);
+signalRMS2 = zeros(Nsweep,1);
+interfererRMS2 = zeros(Nsweep,1);
 disp('Time to complete setting up variables in radarSim...')
 toc
 %% Simulation Loop --------------------------------------------------------
 
 for m = 1:Nsweep      
-
     % Generate Our Signal
     signal.x = step(hwav);                      % generate the FMCW signal
-    signal.xt = step(htx, signal.x);            % transmit the signal
 
     if TARGET               
         % Release so you can change object parameters
         release(htx); release(hrx);
 
         % Update the gain for transceiver to target based on angle
-        htx.Gain = 13.4 + interp1(rad_pat.az, rad_pat.azdB, radtodeg(tgt_ang(m)));
-        hrx.Gain = interp1(rad_pat.az, rad_pat.azdB, radtodeg(-tgt_ang(m)));
+        htx.Gain = 16 + interp1(rad_pat.az, rad_pat.azdB, radtodeg(tgt_ang(m)));
+        hrx.Gain = 13.4 + interp1(rad_pat.az, rad_pat.azdB, radtodeg(-tgt_ang(m)));
     
+        % Transmit Signal
+        signal.xt = step(htx, signal.x);            % transmit the signal
+
         % Propagate Signal
         signal.xp = step(hchannel_twoway,...
             signal.xt,...
@@ -181,11 +192,16 @@ for m = 1:Nsweep
             % Propagate through channel    
             signal.xitfer(:,int) = step(hchannel_oneway, xitfer_t, ...
                 itferPos(m,:,int)', radarPos(m,:)',...
-                itferVel(m,:,int)', radarVel(m,:)');    
+                itferVel(m,:,int)', radarVel(m,:)'); 
+%             signal.xitfer(:,int) = filter(rChan,signal.xitfer(:,int));
+%             signal.xitfer(:,int) = step(hChan, signal.xitfer(:,int));
+            
             
             % Introduce phase shift to interferer signal
             if PHASE_SHIFT
-                signal.xitfer(:, int) = circshift(signal.xitfer,[length(signal.xitfer)/2 length(signal.xitfer)/2]);
+                signal.xitfer(:, int) =...
+                    [signal.xitfer(phaseOffset(int):end, int)
+                    signal.xitfer(1:(phaseOffset(int)-1), int)];
             end
             
             % Receive interferer signal
@@ -197,11 +213,13 @@ for m = 1:Nsweep
         xdItfer = downsample(dechirp(signal.xitferRX, signal.x),n);
         
         % Sum of beat signal of interferer(s)
-        beatSignalItfer = sum(xdItfer,2);
+        beatSignalItfer = 0.0001*sum(xdItfer,2);
         xr.INTonly(:,m) = beatSignalItfer;                           
         beatsignal.INTonly((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = beatSignalItfer;
-        SIR(m) = 20*log10(rms(beatsignal.NoINT)/rms(beatsignal.INTonly));
-
+        signalRMS2(m) = rms(beatSignalTgt).^2;
+        interfererRMS2(m) = rms(beatSignalItfer).^2;
+        SIRdB(m) = 10*log10(signalRMS2(m)/interfererRMS2(m));
+        
         if TARGET
             % Beat signal of chirp and interferer signal
             beatSignalTgtItfer = beatSignalTgt + beatSignalItfer;
@@ -217,13 +235,14 @@ toc
 
 %% Plot SIR
 clear xd
-if and(TARGET, PLOT.SIR)
+if (TARGET && PLOT.SIR && MUTUAL_INTERFERENCE)
     figure
-    intDist = sqrt((itferPos(:,2) - radarPos(:,2)).^2 + (itferPos(:,1) - radarPos(:,1)).^2);
-  %  intDist = itferPos(:,1);
-    plot(intDist, SIR,'.-')
+  %  intDist = sqrt((itferPos(:,2) - radarPos(:,2)).^2 + (itferPos(:,1) - radarPos(:,1)).^2);
+    intDist = itferPos(:,1);
+    plot(intDist, SIRdB,'.-')
     title('SIR')
-    xlabel('Distance Interferer'); ylabel('SIR')
+    xlabel('Interferer x-position (m) '); ylabel('SIR (dB)')
+    grid on
 end
 %%
 
@@ -251,73 +270,48 @@ if MUTUAL_INTERFERENCE
 end
 
 
-%% Calculate Range-Time Plot Using MIT code--------------------------------
-% figure
-% rr = c/(2*bw);
-% N = hwav.SweepTime*fs_bs;
-% time = (0:(1/fs):(((N)/fs) - (1/fs)))*1000;
-% max_range = rr*N/2;
-% zpad = 8*N/2;
-% sif = real(xr_upsweep_NoINT);
-% v = 20*log10(abs(ifft(sif,zpad,2)));
-% S = v(:,1:size(v,2)/2);
-% R = linspace(0,max_range,zpad);
-% m = max(max(v));
-% datamat = S-m;
-% imagesc(time,R,datamat',[-40, 0]);
-% set(gca,'YDir','normal');
-% colorbar;
-% colormap jet
-% xlabel('time (s)');
-% ylabel('range (m)');
-% title('RTI without clutter rejection');
-% ylim([0 30]);
-
-
 
 %% Calculation Range Distance ---------------------------------------------
 if (TARGET)
-    fbu_rng_NoINT = rootmusic(pulsint(xr_upsweep_NoINT,'coherent'),1,fs_bs);
-    fbd_rng_NoINT = rootmusic(pulsint(xr_downsweep_NoINT,'coherent'),1,fs_bs);
-    output.rng_est_NoINT = beat2range([fbu_rng_NoINT fbd_rng_NoINT],sweep_slope,c)/2;
-    fd_NoINT = -(fbu_rng_NoINT+fbd_rng_NoINT)/2;
-    output.v_est_NoINT = dop2speed(fd_NoINT,lambda)/2;
-
-    rng_est_NoINT = zeros(Nsweep,1);
-    rng_true_NoINT = zeros(Nsweep,1);
-    v_est_NoINT = zeros(Nsweep, 1);
+    output.rng_est_NoINT = zeros(Nsweep,1);
+    output.rng_true = zeros(Nsweep,1);
+    output.v_est_NoINT = zeros(Nsweep, 1);
+    output.v_true = -(radarVel(1,1)-tgtVel(1,1))*ones(Nsweep,1);
 
     % Calculation if no interference
     for i = 1:Nsweep
         fbu_rng_NoINT = rootmusic(pulsint(xr_upsweep_NoINT(:,i),'coherent'),1,fs_bs);
         fbd_rng_NoINT = rootmusic(pulsint(xr_downsweep_NoINT(:,i),'coherent'),1,fs_bs);
-        rng_est_NoINT(i) = beat2range([fbu_rng_NoINT fbd_rng_NoINT],sweep_slope,c)/2;
+        output.rng_est_NoINT(i) = beat2range([fbu_rng_NoINT fbd_rng_NoINT],sweep_slope,c)/2;
         fd_NoINT = -(fbu_rng_NoINT+fbd_rng_NoINT)/2;
-        v_est_NoINT(i) = dop2speed(fd_NoINT,lambda)/2;
-        rng_true_NoINT(i) = sqrt(sum((radarPos(i,:)-tgtPos(i,:)).^2));
+        output.v_est_NoINT(i) = dop2speed(fd_NoINT,lambda)/2;
+        output.rng_true(i) = sqrt(sum((radarPos(i,:)-tgtPos(i,:)).^2));
     end
 
 % Calculation with interference
     if (MUTUAL_INTERFERENCE)
-        fbu_rng_INT = rootmusic(pulsint(xr_upsweep_INT,'coherent'),1,fs_bs);
-        fbd_rng_INT = rootmusic(pulsint(xr_downsweep_INT,'coherent'),1,fs_bs);
-        output.rng_est_INT = beat2range([fbu_rng_INT fbd_rng_INT],sweep_slope,c)/2;
-        fd_INT = -(fbu_rng_INT+fbd_rng_INT)/2;
-        output.v_est_INT = dop2speed(fd_INT,lambda)/2;
-
-        rng_est_INT = zeros(Nsweep,1);
-        v_est_INT = zeros(Nsweep, 1);
+        output.rng_est_INT = zeros(Nsweep,1);
+        output.v_est_INT = zeros(Nsweep, 1);
         for i = 1:Nsweep
             fbu_rng_INT = rootmusic(pulsint(xr_upsweep_INT(:,i),'coherent'),1,fs_bs);
             fbd_rng_INT = rootmusic(pulsint(xr_downsweep_INT(:,i),'coherent'),1,fs_bs);
-            rng_est_INT(i) = beat2range([fbu_rng_INT fbd_rng_INT],sweep_slope,c)/2;
+            output.rng_est_INT(i) = beat2range([fbu_rng_INT fbd_rng_INT],sweep_slope,c)/2;
             fd_INT = -(fbu_rng_INT+fbd_rng_INT)/2;
-            v_est_INT(i) = dop2speed(fd_INT,lambda)/2;
+            output.v_est_INT(i) = dop2speed(fd_INT,lambda)/2;
         end
     end
 else
     output = 0;
 end
+%% Range Doppler Estimation
+% hrdresp = phased.RangeDopplerResponse('PropagationSpeed',c,...
+%     'DopplerOutput','Speed','OperatingFrequency',fc,'SampleRate',fs_bs,...
+%     'RangeMethod','FFT','SweepSlope',sweep_slope,...
+%     'RangeFFTLengthSource','Property','RangeFFTLength',2048,...
+%     'DopplerFFTLengthSource','Property','DopplerFFTLength',256);
+% figure
+% plotResponse(hrdresp, xr.NoINT);
+% clim = caxis;
 
 clear fd_INT fbd_rng_INT fbu_rng_INT fbu_rng_NoINT fbd_rng_NoINT fd_NoINT
 clear xr_upsweep_NoINT xr_downsweep_NoINT xr_upsweep_INT xr_downsweep_INT
@@ -329,10 +323,10 @@ if and(PLOT.ACCURACY, TARGET)
     hold on
     suptitle(['Accuracy with ' num2str(Nsweep) ' Sweeps'])
     t = (0:Nsweep-1)*hwav.SweepTime;
-    plot(t, rng_true_NoINT, '.-', 'DisplayName', 'Target Range (m)')
-    plot(t, rng_est_NoINT,'.-', 'DisplayName', 'Calc w/o Int (m)'); 
+    plot(t, output.rng_true, '.-', 'DisplayName', 'Target Range (m)')
+    plot(t, output.rng_est_NoINT,'.-', 'DisplayName', 'Calc w/o Int (m)'); 
     if MUTUAL_INTERFERENCE
-        plot(t, rng_est_INT, '.-', 'DisplayName', 'Calc w/ Int (m) ')
+        plot(t, output.rng_est_INT, '.-', 'DisplayName', 'Calc w/ Int (m) ')
     end
     legend('Location', 'eastoutside'); 
     hold off
@@ -342,11 +336,11 @@ if and(PLOT.ACCURACY, TARGET)
     subplot(212);
     grid on
     hold on
-    plot(t, -(radarVel(1,1)-tgtVel(1,1))*ones(Nsweep,1), ...
+    plot(t, output.v_true, ...
         '.-', 'DisplayName', 'Target Speed (m/s)')
-    plot(t, -v_est_NoINT, '.-', 'DisplayName', 'Calc w/o Int (m/s)');
+    plot(t, -output.v_est_NoINT, '.-', 'DisplayName', 'Calc w/o Int (m/s)');
     if MUTUAL_INTERFERENCE
-        plot(t, -v_est_INT, '.-', 'DisplayName', 'Calc w/ Int (m/s)');
+        plot(t, -output.v_est_INT, '.-', 'DisplayName', 'Calc w/ Int (m/s)');
     end
     hold off
     legend('Location', 'eastoutside'); 
@@ -355,6 +349,7 @@ if and(PLOT.ACCURACY, TARGET)
     
      
 end
+
 
 %% Save to file
 if SAVE

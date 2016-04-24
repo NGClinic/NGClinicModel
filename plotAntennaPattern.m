@@ -1,4 +1,4 @@
-function plotAntennaPattern( antenna, name )
+function plotAntennaPattern( rad_pat, name )
 % antenna - structure with four components
 %     antenna.az
 %     antenna.azdB
@@ -8,8 +8,8 @@ function plotAntennaPattern( antenna, name )
 % name - string with the name of the antenna
 figure
 subplot(211)
-az = antenna.az;
-axdB = antenna.azdB;
+az = rad_pat.az;
+axdB = rad_pat.azdB;
 plot(az,axdB)
 axis([min(az) max(az) (min(axdB)-5) (max(axdB)+5)])
 grid on
@@ -18,8 +18,8 @@ ylabel('Directivity (dB)')
 title('Array Directivity Variation-Elevation  = 0 deg.')
 
 subplot(212)
-el = antenna.el;
-eldB = antenna.eldB;
+el = rad_pat.el;
+eldB = rad_pat.eldB;
 plot(el,eldB)
 axis([min(el) max(el) (min(eldB)-5) (max(eldB) + 5)])
 grid on

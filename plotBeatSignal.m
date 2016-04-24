@@ -1,5 +1,18 @@
-function time = plotBeatSignal( beatsignal, fs, PLOT, MUTUAL_INTERFERENCE, TARGET)
-% plot beat signal
+function time = plotBeatSignal( beatsignal, fs, PLOT, ...
+    MUTUAL_INTERFERENCE, TARGET)
+% Function:   Plots the beatsignal struct.
+%
+% Inputs:     beatsignal - expects a struct with the following fields:
+%                 beatsignal.NoINT - (double array) beat signal from reflected signal only
+%                 beatsignal.INTonly - (double array) beat signal from interference signal only
+%                 beatsignal.INT - (double array) beat signal from both interference and reflected signal
+%             fs - (int) sample rate of the beatsignal
+%             PLOT - (boolean) whether or not to plot/run function
+%             MUTUAL_INTERFERENCE - (boolean) whether or not mutual interference is simulated
+%             TARGET - (boolean) whether or not target is simulated
+%             
+% Output:     time - (double array) time of the beatsignal
+                
 if PLOT
     XLim = [-fs/2 fs/2];
     % Plot signals if mutual interference
@@ -95,7 +108,9 @@ if PLOT
         ylabel('Amplitude')
         %set(gca, 'xtick', [0:(dur - (1/fs)):(((length(beatSignal))/fs) - (1/fs))].*1000)
         grid on
-        ylim(ax.YLim);
+        if MUTUAL_INTERFERENCE
+            ylim(ax.YLim);
+        end
         grid on
 
         subplot(212)

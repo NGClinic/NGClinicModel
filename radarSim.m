@@ -210,10 +210,11 @@ for m = 1:Nsweep
             
         end
         % Beat signal of interferer
-        xdItfer = downsample(dechirp(signal.xitferRX, signal.x),n);
+        xdItfer = downsample(dechirp(sum(signal.xitferRX,2), signal.x),n);
         
         % Sum of beat signal of interferer(s)
-        beatSignalItfer = 0.0001*sum(xdItfer,2);
+        fudgeFactor = 0.01;
+        beatSignalItfer = fudgeFactor*xdItfer;
         xr.INTonly(:,m) = beatSignalItfer;                           
         beatsignal.INTonly((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = beatSignalItfer;
         signalRMS2(m) = rms(beatSignalTgt).^2;
@@ -222,7 +223,9 @@ for m = 1:Nsweep
         
         if TARGET
             % Beat signal of chirp and interferer signal
-            beatSignalTgtItfer = beatSignalTgt + beatSignalItfer;
+%             beatSignalTgtItfer = beatSignalTgt + beatSignalItfer;
+            inputSignal = signal.xtgtRX + fudgeFactor.*sum(signal.xitferRX,2);
+            beatSignalTgtItfer = downsample(dechirp(inputSignal, signal.x),n);
             xr.INT(:,m) = beatSignalTgtItfer;                            % buffer the dechirped signal
             beatsignal.INT((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = beatSignalTgtItfer;
         end

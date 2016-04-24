@@ -16,7 +16,7 @@ rad_pat = TPLink; clear TPLink;
 
 % Vehicle parameters ------------------------------------------------------
 % Our system
-Nsweep = 32;
+Nsweep = 4;
 rangeRes = 1;
 bw = 70e6; %range2bw(rangeRes,c); % Increasing bandwidth improves resolution
 % changing Tm does not change the power level/ SIR calculations
@@ -68,7 +68,7 @@ PLOT.SIR = 1;
 ONE_WAY_CHANNEL = 0;
 SAVE = 0;
 PHASE_SHIFT = 1;
-MUTUAL_INTERFERENCE =0;
+MUTUAL_INTERFERENCE =1;
 TARGET = 1;
 fileName = 'filename.mat';
 

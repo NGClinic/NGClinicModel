@@ -1,5 +1,10 @@
 function time = plotBeatSignal( beatsignal, fs, PLOT, ...
     MUTUAL_INTERFERENCE, TARGET)
+% plotBeatSignal
+% HMC 2015-2016 Clinic Project
+%     Written by Amy Ngai
+%     mngai@hmc.edu
+%
 % Function:   Plots the beatsignal struct.
 %
 % Inputs:     beatsignal - expects a struct with the following fields:

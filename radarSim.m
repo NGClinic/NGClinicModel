@@ -1,14 +1,19 @@
-function [output, beatsignal, fs_bs, signalRMS2, interfererRMS2, SIRdB] = radarSim(fc, tm, tm_INT, rangeMax, bw,...
-    bw_INT, Nsweep, LPmixer,...
-    rad_pat, radarPos, itferPos, tgtPos, radarVel, itferVel, tgtVel,...
-    txPower, txLossFactor,rxNF,...
-    rxLossFactor,...
-    PLOT, MUTUAL_INTERFERENCE, TARGET,...
-    PHASE_SHIFT, SAVE, fileName, targetType)
-
-%% FMCW Example -----------------------------------------------------------
+% function [output, beatsignal, fs_bs, signalRMS2, interfererRMS2, SIRdB] = radarSim(fc, tm, tm_INT, rangeMax, bw,...
+%     bw_INT, Nsweep, LPmixer,...
+%     rad_pat, radarPos, itferPos, tgtPos, radarVel, itferVel, tgtVel,...
+%     txPower, txLossFactor,rxNF,...
+%     rxLossFactor,...
+%     PLOT, MUTUAL_INTERFERENCE, TARGET,...
+%     PHASE_SHIFT, SAVE, fileName, targetType, cal)
 % Based on Automotive Radar Example from Matlab
 %   Copyright 2012-2015 The MathWorks, Inc.
+%
+% HMC 2015-2016 Clinic Project
+%   Modified by Amy Ngai
+%   mngai@hmc.edu
+%
+% Function:   Simulates radar environment
+
 tic
 
 %% System waveform parameters ---------------------------------------------
@@ -125,13 +130,17 @@ beatsignal.INTonly = zeros((tm/2)*fs_bs*numChirpsSweeps*Nsweep, 1);
 % Calculate target angle
 tgt_ang = atan2(tgtPos(:,2) - radarPos(:,2), tgtPos(:,1) - radarPos(:,1));
     
+SIRdBCal = zeros(Nsweep,1);
 SIRdB = zeros(Nsweep,1);
 signalRMS2 = zeros(Nsweep,1);
+interfererRMS2Cal = zeros(Nsweep,1);
 interfererRMS2 = zeros(Nsweep,1);
+itferGaindB = zeros(Nsweep,1);
 disp('Time to complete setting up variables in radarSim...')
 toc
 %% Simulation Loop --------------------------------------------------------
-
+disp('...')
+disp('Beginning simulation loop...')
 for m = 1:Nsweep      
     % Generate Our Signal
     signal.x = step(hwav);                      % generate the FMCW signal
@@ -169,10 +178,16 @@ for m = 1:Nsweep
     
     % If mutual interference
     if MUTUAL_INTERFERENCE
-                
+        
+        
+        
         % Iterate through number of interferers     
         for int = 1:numInt   
             
+            % Calculate fudge factor
+            int_rng = sqrt((itferPos(m,2,int) - radarPos(m,2)).^2 + (itferPos(m,1,int) - radarPos(m,1)).^2);
+            fudgeFactordB = spline(calData.distance, calData.coeff, int_rng);
+            fudgeFactor = 1;%10^(fudgeFactordB/10);
             % Calculate angle
             int_ang = atan2(itferPos(m,2,int) - radarPos(m,2), itferPos(m,1,int) - radarPos(m,1));
             
@@ -182,7 +197,7 @@ for m = 1:Nsweep
             % Update gain based on angle
             hrx.Gain = interp1(rad_pat.az, rad_pat.azdB, radtodeg(-int_ang));
             htx_INT.Gain = 13.4 + interp1(rad_pat.az, rad_pat.azdB, radtodeg(-int_ang));
-            
+            itferGaindB(m) = htx_INT.Gain+hrx.Gain;
             % Generate interfer signal
             xitfer_gen = step(hwavItfer{int});         
             
@@ -206,26 +221,36 @@ for m = 1:Nsweep
             
             % Receive interferer signal
             signal.xitferRX(:,int) = step(hrx, signal.xitfer(:,int));
+            signal.xitferCal(:,int) = signal.xitferRX(:,int)/sqrt(fudgeFactor);
             
             
         end
         % Beat signal of interferer
-        xdItfer = downsample(dechirp(sum(signal.xitferRX,2), signal.x),n);
+        sumXitfer = sum(signal.xitferRX,2);
+        beatItfer = downsample(dechirp(sumXitfer, signal.x),n);
+        
+        sumXitferCal = sum(signal.xitferCal,2);
+        beatItferCal = downsample(dechirp(sumXitferCal, signal.x),n);
+        
         
         % Sum of beat signal of interferer(s)
-        fudgeFactor = 0.01;
-        beatSignalItfer = fudgeFactor*xdItfer;
-        xr.INTonly(:,m) = beatSignalItfer;                           
-        beatsignal.INTonly((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = beatSignalItfer;
-        signalRMS2(m) = rms(beatSignalTgt).^2;
-        interfererRMS2(m) = rms(beatSignalItfer).^2;
-        SIRdB(m) = 10*log10(signalRMS2(m)/interfererRMS2(m));
+        xr.INTonly(:,m) = beatItferCal;                           
+        beatsignal.INTonly((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = beatItferCal;
+        
+   
         
         if TARGET
+            % Calculate SIR if target
+            signalRMS2(m) = rms(beatSignalTgt).^2;
+            interfererRMS2Cal(m) = rms(beatItferCal).^2;
+            interfererRMS2(m) = rms(beatItfer).^2;
+            SIRdBCal(m) = 10*log10(signalRMS2(m)/interfererRMS2Cal(m));
+            SIRdB(m) = 10*log10(signalRMS2(m)/interfererRMS2(m));
+        
+        
             % Beat signal of chirp and interferer signal
-%             beatSignalTgtItfer = beatSignalTgt + beatSignalItfer;
-            inputSignal = signal.xtgtRX + fudgeFactor.*sum(signal.xitferRX,2);
-            beatSignalTgtItfer = downsample(dechirp(inputSignal, signal.x),n);
+             inputSignal = signal.xtgtRX + sumXitferCal;
+             beatSignalTgtItfer = downsample(dechirp(inputSignal, signal.x),n);
             xr.INT(:,m) = beatSignalTgtItfer;                            % buffer the dechirped signal
             beatsignal.INT((((tm/2)*fs_bs*numChirpsSweeps)*(m-1)+1):((tm/2)*fs_bs*numChirpsSweeps*m)) = beatSignalTgtItfer;
         end
@@ -242,17 +267,65 @@ if (TARGET && PLOT.SIR && MUTUAL_INTERFERENCE)
     figure
   %  intDist = sqrt((itferPos(:,2) - radarPos(:,2)).^2 + (itferPos(:,1) - radarPos(:,1)).^2);
     intDist = itferPos(:,1);
-    plot(intDist, SIRdB,'.-')
+    time = (0:Nsweep-1)*hwav.SweepTime;
+    line(time, SIRdBCal, 'Color', 'k', 'Marker', '.')
+    ylabel('SIR (dB)')
+    ax1 = gca; %current axis
+    ax1.YColor = 'k';
+    set(ax1, 'xtick', [])
+    ax1_pos = ax1.Position; % position of first axes
+    ax2 = axes('Position',ax1_pos,...
+        'XAxisLocation','bottom',...
+        'YAxisLocation','right',...
+        'Color','none');
+    line(time, intDist, 'Parent', ax2, 'Color', 'r', 'Marker', '.')
+    ax2 = gca; %current axis
+    ax2.XColor = 'k';
+    ax2.YColor = 'r';
+    %set(ax2,'ActivePositionProperty','outerposition');
+    ylabel('Interferer Distance (m)')
+    xlabel('Time (s)')
     title('SIR')
-    xlabel('Interferer x-position (m) '); ylabel('SIR (dB)')
     grid on
+       
+    % Plot FPSL
+    figure
+    hold on
+    intDist = sqrt((itferPos(:,2) - radarPos(:,2)).^2 + (itferPos(:,1) - radarPos(:,1)).^2);
+    FPSL = (4.*intDist.*pi./lambda).^2;
+    logy = 10*log10(FPSL) - itferGaindB;
+    logy = logy - mean(logy);
+    diff = SIRdBCal(4) - logy(4);
+    plot(intDist, logy + diff, 'k.-')
+    
+    % Plot Calibrated SIR
+    plot(intDist, SIRdBCal, 'g.-')
+    title('SIR Comparison')
+    ylabel('SIR (dB)')
+    
+    % Plot Calibrated SIR
+    plot(intDist, SIRdB, 'b.-')
+    title('SIR Comparison')
+    ylabel('SIR (dB)')
+    
+    
+    % Plot HW Data
+    hold on
+    load('SIRdata.mat')
+    plot(5:5:30, SIRlog(:,1), 'r.-')
+    legend FPSL 'SW SIR Calibrated' 'SW SIR Uncalibrated' 'HW SIM' 
+    errorbar(5:5:30, SIRlog(:,1), SIR_stdDev(:,1) ,'r')
+    xlabel('Interferer Distance (m)')
+    grid on
+
+    
 end
 %%
 
 % Save memory!
-clear hcar hcarplatform hchannel_oneway hchannel_twoway hitfer
-clear hitferplatform hradarplatform hrx hspec htx htx_INT
-clear i int_ang int_rng xitfer_gen
+% clear hcar hcarplatform hchannel_oneway hchannel_twoway hitfer
+% clear hitferplatform hradarplatform hrx hspec htx htx_INT
+% clear i int_ang int_rng xitfer_gen
 
 %% Plot Beat Signal TD and FD ---------------------------------------------
 plotBeatSignal(beatsignal, fs_bs, PLOT.BEATSIGNAL, MUTUAL_INTERFERENCE, TARGET);

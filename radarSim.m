@@ -4,7 +4,7 @@
 %     txPower, txLossFactor,rxNF,...
 %     rxLossFactor,...
 %     PLOT, MUTUAL_INTERFERENCE, TARGET,...
-%     PHASE_SHIFT, SAVE, fileName, targetType, cal)
+%     PHASE_SHIFT, SAVE, fileName, targetType, calData)
 % Based on Automotive Radar Example from Matlab
 %   Copyright 2012-2015 The MathWorks, Inc.
 %
@@ -15,7 +15,7 @@
 % Function:   Simulates radar environment
 
 tic
-
+FF = 0;
 %% System waveform parameters ---------------------------------------------
 c = 3e8;   
 lambda = c/fc; 
@@ -185,9 +185,18 @@ for m = 1:Nsweep
         for int = 1:numInt   
             
             % Calculate fudge factor
-            int_rng = sqrt((itferPos(m,2,int) - radarPos(m,2)).^2 + (itferPos(m,1,int) - radarPos(m,1)).^2);
-            fudgeFactordB = spline(calData.distance, calData.coeff, int_rng);
-            fudgeFactor = 1;%10^(fudgeFactordB/10);
+            if FF
+                
+%                 moreFF = polyval(extrapCal, moreDist)
+%                 extrapCal = polyfit(calData.distance, calData.coeff, 1);
+                int_rng = sqrt((itferPos(m,2,int) - radarPos(m,2)).^2 + (itferPos(m,1,int) - radarPos(m,1)).^2);
+                 fudgeFactordB = spline(calData.distance, calData.coeff, int_rng);
+%                 fudgeFactordB = polyval(extrapCal, int_rng);
+                fudgeFactor = 10^(fudgeFactordB/10);
+            else
+                fudgeFactor = 1;
+            end
+            
             % Calculate angle
             int_ang = atan2(itferPos(m,2,int) - radarPos(m,2), itferPos(m,1,int) - radarPos(m,1));
             
@@ -264,6 +273,8 @@ toc
 %% Plot SIR
 clear xd
 if (TARGET && PLOT.SIR && MUTUAL_INTERFERENCE)
+    
+    %% Plot SIR and Interferer Position on top of each other
     figure
   %  intDist = sqrt((itferPos(:,2) - radarPos(:,2)).^2 + (itferPos(:,1) - radarPos(:,1)).^2);
     intDist = itferPos(:,1);
@@ -288,34 +299,34 @@ if (TARGET && PLOT.SIR && MUTUAL_INTERFERENCE)
     title('SIR')
     grid on
        
+    %% Plot all the different types of SIR
     % Plot FPSL
     figure
-    hold on
     intDist = sqrt((itferPos(:,2) - radarPos(:,2)).^2 + (itferPos(:,1) - radarPos(:,1)).^2);
-    FPSL = (4.*intDist.*pi./lambda).^2;
-    logy = 10*log10(FPSL) - itferGaindB;
-    logy = logy - mean(logy);
-    diff = SIRdBCal(4) - logy(4);
-    plot(intDist, logy + diff, 'k.-')
-    
-    % Plot Calibrated SIR
-    plot(intDist, SIRdBCal, 'g.-')
-    title('SIR Comparison')
-    ylabel('SIR (dB)')
-    
-    % Plot Calibrated SIR
-    plot(intDist, SIRdB, 'b.-')
-    title('SIR Comparison')
-    ylabel('SIR (dB)')
-    
-    
+   
     % Plot HW Data
     hold on
     load('SIRdata.mat')
-    plot(5:5:30, SIRlog(:,1), 'r.-')
-    legend FPSL 'SW SIR Calibrated' 'SW SIR Uncalibrated' 'HW SIM' 
-    errorbar(5:5:30, SIRlog(:,1), SIR_stdDev(:,1) ,'r')
+    plot(intDist, flipud(SIRlog(:,1)), 'ko-', 'DisplayName', 'HW SIR')
+    
+    
+    % Plot UnCalibrated SIR
+    plot(intDist, SIRdB, 'b.-', 'DisplayName', 'SW SIR Uncalibrated')   
+    
+    hold on
+    
+    % Plot Calibrated SIR
+    h = plot(intDist, SIRdBCal, 'gx-', 'DisplayName', 'SW SIR Calibrated');
+    set(h,'linewidth',2)
+  
+    grid on
+    
+    legend('Location', 'eastoutside')   
+    
+    errorbar(intDist, flipud(SIRlog(:,1)), flipud(SIR_stdDev(:,1)) ,'k')
     xlabel('Interferer Distance (m)')
+    ylabel('SIR (dB)')
+    title('SIR Comparison')
     grid on
 
     
@@ -345,9 +356,7 @@ if MUTUAL_INTERFERENCE
     xr_downsweep_INT = xr.INT((hwav.SweepTime*fs_bs):end, :);
 end
 
-
-
-%% Calculation Range Distance ---------------------------------------------
+% Calculation Range Distance ---------------------------------------------
 if (TARGET)
     output.rng_est_NoINT = zeros(Nsweep,1);
     output.rng_true = zeros(Nsweep,1);
@@ -379,49 +388,40 @@ if (TARGET)
 else
     output = 0;
 end
-%% Range Doppler Estimation
-% hrdresp = phased.RangeDopplerResponse('PropagationSpeed',c,...
-%     'DopplerOutput','Speed','OperatingFrequency',fc,'SampleRate',fs_bs,...
-%     'RangeMethod','FFT','SweepSlope',sweep_slope,...
-%     'RangeFFTLengthSource','Property','RangeFFTLength',2048,...
-%     'DopplerFFTLengthSource','Property','DopplerFFTLength',256);
-% figure
-% plotResponse(hrdresp, xr.NoINT);
-% clim = caxis;
 
 clear fd_INT fbd_rng_INT fbu_rng_INT fbu_rng_NoINT fbd_rng_NoINT fd_NoINT
 clear xr_upsweep_NoINT xr_downsweep_NoINT xr_upsweep_INT xr_downsweep_INT
-%% Plot accuracy of calculations ------------------------------------------
+
+% Plot accuracy of calculations ------------------------------------------
 if and(PLOT.ACCURACY, TARGET)
     figure
-    subplot(211);
+%     subplot(211);
     grid on
     hold on
     suptitle(['Accuracy with ' num2str(Nsweep) ' Sweeps'])
     t = (0:Nsweep-1)*hwav.SweepTime;
-    plot(t, output.rng_true, '.-', 'DisplayName', 'Target Range (m)')
-    plot(t, output.rng_est_NoINT,'.-', 'DisplayName', 'Calc w/o Int (m)'); 
+    plot(t, output.rng_true, 'k.-', 'DisplayName', 'Target Range (m)')
+    plot(t, output.rng_est_NoINT,'g.-', 'DisplayName', 'Calc w/o Int (m)'); 
     if MUTUAL_INTERFERENCE
-        plot(t, output.rng_est_INT, '.-', 'DisplayName', 'Calc w/ Int (m) ')
+        plot(t, output.rng_est_INT, 'r.-', 'DisplayName', 'Calc w/ Int (m) ')
     end
-    legend('Location', 'eastoutside'); 
+     legend('Location', 'eastoutside'); 
     hold off
     xlim([0, t(end)])
-    title('Range'); ylabel('m'); xlabel('s');
-   
-    subplot(212);
-    grid on
-    hold on
-    plot(t, output.v_true, ...
-        '.-', 'DisplayName', 'Target Speed (m/s)')
-    plot(t, -output.v_est_NoINT, '.-', 'DisplayName', 'Calc w/o Int (m/s)');
-    if MUTUAL_INTERFERENCE
-        plot(t, -output.v_est_INT, '.-', 'DisplayName', 'Calc w/ Int (m/s)');
-    end
-    hold off
-    legend('Location', 'eastoutside'); 
-    xlim([0, t(end)])
-    title('Velocity'); ylabel('m/s');  xlabel('s');
+    title('Range'); ylabel('Target Postion (m)'); xlabel('Time (s)');
+%     subplot(212);
+%     grid on
+%     hold on
+%     plot(t, output.v_true, ...
+%         '.-', 'DisplayName', 'Target Speed (m/s)')
+%     plot(t, -output.v_est_NoINT, '.-', 'DisplayName', 'Calc w/o Int (m/s)');
+%     if MUTUAL_INTERFERENCE
+%         plot(t, -output.v_est_INT, '.-', 'DisplayName', 'Calc w/ Int (m/s)');
+%     end
+%     hold off
+%     legend('Location', 'eastoutside'); 
+%     xlim([0, t(end)])
+%     title('Velocity'); ylabel('m/s');  xlabel('s');
     
      
 end

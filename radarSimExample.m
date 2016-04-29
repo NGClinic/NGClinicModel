@@ -25,7 +25,7 @@ rad_pat = TPLink; clear TPLink;
 
 % Vehicle parameters ------------------------------------------------------
 % Our system
-Nsweep = 7;
+Nsweep = 6;
 rangeRes = 1;
 bw = 70e6; %range2bw(rangeRes,c); % Increasing bandwidth improves resolution
 % changing Tm does not change the power level/ SIR calculations
@@ -33,7 +33,7 @@ bw = 70e6; %range2bw(rangeRes,c); % Increasing bandwidth improves resolution
 tm = 40e-3;      
 radar_speed_x = 0;                    %m/s
 radar_init_pos = [0;0;0.5];           %m
-tgt_speed_x = 0; %-25/((tm/2)*(Nsweep-1));   %m/s, 
+tgt_speed_x = 0; %-30/((tm/2)*(Nsweep-1));   %m/s, 
 tgt_init_pos = [5;0;0.5];            %m
 
 %
@@ -52,8 +52,8 @@ elseif wave == 3
 end
 
 % itferData = [x, y, dx, tm, bw] -100/((tm)*(Nsweep-1)/2)
-intVel = -30/((tm/2)*(Nsweep-1));
-itferData = [40, 3.048, intVel, tm_INT, bw_INT];
+intVel = -25/((tm/2)*(Nsweep-1));
+itferData = [30, 3.048, intVel, tm_INT, bw_INT];
 %             15, -3.048,0, tm//42, bw;
 %               40, -3.048,0, tm/2, bw;
 %                55, -3.048,0, tm/2, bw];
@@ -72,7 +72,7 @@ toc
 % Turn on and off sections of code ---------------------------------------
 PLOT.VEHICLES = 1;
 PLOT.ACCURACY = 1;
-PLOT.PREVIEW = 0;
+PLOT.PREVIEW = 1;
 PLOT.BEATSIGNAL = 1;
 PLOT.CHIRP = 0;
 PLOT.SIR = 1;
@@ -106,7 +106,7 @@ load('calData.mat')
 %     rxLossFactor,...
 %     PLOT, MUTUAL_INTERFERENCE, TARGET, ...
 %     PHASE_SHIFT, SAVE, fileName, targetType, calData);
-% 
+
 % clearvars -except beatsignal fs_bs output signalRMS2 interfererRMS2 SIRdB
 % 
  %%

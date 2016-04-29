@@ -50,6 +50,7 @@ if PLOT
             legend('Signal Only', 'Interference Only', 'Signal + Interference')
             xlim(XLim)
             grid on
+            axFFT = gca;
 
 
 
@@ -73,6 +74,7 @@ if PLOT
             xlabel('freq (Hz)')
             ylabel('|fft|')
             xlim(XLim)
+            ylim(axFFT.YLim);
             grid on
         end
         
@@ -98,6 +100,7 @@ if PLOT
         xlabel('freq (Hz)')
         ylabel('|fft|')
         xlim(XLim)  
+        ylim(axFFT.YLim);
         grid on
         
     end
@@ -127,6 +130,7 @@ if PLOT
         xlabel('freq (Hz)')
         ylabel('|fft|')
         xlim(XLim)
+        ylim(axFFT.YLim);
         grid on
     end
     

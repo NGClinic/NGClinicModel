@@ -39,7 +39,7 @@ lbNumSw = uicontrol(f,'Style','text',...
                 'Position',[leftTit+20 botTit2-25 130 30]);
             
 lbScen = uicontrol(f,'Style','text',...
-                'String','Desired Scenario',...
+                'String','Desired Case',...
                 'HorizontalAlignment','left',...
                 'FontSize',12,...
                 'Position',[leftTit+20 botTit2-65 200 30]); 
@@ -442,11 +442,11 @@ pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
        target = 'car';
        SAVE = 0;
        fileName = 'filename.mat';
-       PLOT.VEHICLES = 1;
+       PLOT.VEHICLES = 0;
        PLOT.POWER = 0;
        PLOT.ACCURACY = 1;
        PLOT.PREVIEW = 0;
-       PLOT.BEATSIGNAL = 0;
+       PLOT.BEATSIGNAL = 1;
        PLOT.CHIRP = 0;
        target = 'car';
        
@@ -458,6 +458,8 @@ pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
        bw_INT = str2double(get(tbIbw,'string'))*1e6;
        tm_INTVal = get(popItm,'value');
        tm_INT = str2double(popItmList{tm_INTVal})*1e-3;
+       tm = 10e-3;
+       tm_INT = 10e-3;
        
        % Antenna Parameters
        txPower = str2double(get(tbtxP,'string'));
@@ -643,6 +645,7 @@ pbCancel = uicontrol(f,'Style','pushbutton','String','Cancel',...
            TARGET = 0;
            itfer_speed = car_speed;
            itfer_init_pos = car_init_pos;
+           itferData = [xLoc yLoc car_speed];
        end
        
        PLOT = 1;
